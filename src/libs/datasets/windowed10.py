@@ -15,6 +15,8 @@ import matplotlib
 matplotlib.use('Qt5Cairo')
 import matplotlib.pyplot as plt
 
+import pickle
+
 from db_connectors import SQLite3Connector
 
 _windows10_fold_perm = None
@@ -28,11 +30,29 @@ class Windowed10Dataset(Dataset):
                  forecast_window=20,
                  num_stocks=3,
                  train=True,
-                 transform=None):
+                 transform=None,
+                 cache_enabled=True):
 
         super().__init__()
 
         self.transform = transform
+
+        refresh_cache = True
+        if cache_enabled:
+            if train:
+                cache_path = data_path / 'cache' / 'windowed10_cache-train.pkl'
+            else:
+                cache_path = data_path / 'cache' / 'windowed10_cache-test.pkl'
+
+            if cache_path.is_file():
+                with open(cache_path, 'rb') as file:
+                    cached = pickle.load(file)
+                if (cached['num_samples'] == num_samples and
+                    cached['forecast_window'] == forecast_window and
+                        cached['num_stocks'] == num_stocks):
+                    self.data = cached['data']
+                    refresh_cache = False
+                    return
 
         db = SQLite3Connector.connect(data_path / 'eoddata.db')
         schema = db.get_schema('ohlcv100')
@@ -126,6 +146,29 @@ class Windowed10Dataset(Dataset):
                 df.iloc[seq_start + forecast_window].values)
 
             self.data.append((seq_input, seq_label))
+
+        if cache_enabled and refresh_cache:
+            if train:
+                cache_path = data_path / 'cache' / 'windowed10_cache-train.pkl'
+            else:
+                cache_path = data_path / 'cache' / 'windowed10_cache-test.pkl'
+
+            cached = {'num_samples': num_samples,
+                      'forecast_window': forecast_window,
+                      'num_stocks': num_stocks,
+                      'data': self.data}
+
+            with open(cache_path, 'wb') as file:
+                pickle.dump(cached, file)
+
+
+#            if cache_path.is_file():
+#                cached = pickle.load(cache_path)
+#                if (cached['num_samples'] == num_samples and
+#                    cached['forecast_window'] == forecast_window and
+#                        cached['num_stocks'] == num_stocks):
+#                    self.data = cached['data']
+#                    return
 
 #            print(seq_input)
 #            print(seq_label)

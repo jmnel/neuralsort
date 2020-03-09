@@ -8,26 +8,30 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data.dataloader import DataLoader
 
-import matplotlib
-matplotlib.use('Qt5Cairo')
-import matplotlib.pyplot as plt
+#import matplotlib
+# matplotlib.use('Qt5Cairo')
+#import matplotlib.pyplot as plt
 
 from db_connectors import SQLite3Connector
 from datasets import Windowed10Dataset
 
 torch.manual_seed(0)
-device = torch.device('cpu')
+
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 num_layers = 1
 hidden_size = 100
-train_size = 640
-test_size = 160
-train_batch_size = 10
-test_batch_size = 10
+train_size = 6400
+test_size = 1600
+train_batch_size = 100
+test_batch_size = 100
 
-epochs = 100
-forecast_window = 20
-num_stocks = 3
+epochs = 200
+forecast_window = 100
+num_stocks = 5
 
 
 def bl_matmul(mat_a, mat_b):
@@ -70,9 +74,9 @@ class LstmOhlcvModel(nn.Module):
     def __init__(self,
                  num_layers=1,
                  hidden_size=100,
-                 num_stocks=3,
+                 num_stocks=5,
                  num_attributes=5,
-                 device='cpu'):
+                 device='cuda'):
 
         super().__init__()
 
@@ -82,7 +86,16 @@ class LstmOhlcvModel(nn.Module):
                             batch_first=True)
 
         self.linear = nn.Linear(in_features=hidden_size,
-                                out_features=num_stocks)
+                                out_features=1000)
+
+        self.linear2 = nn.Linear(in_features=1000,
+                                 out_features=500)
+
+        self.linear3 = nn.Linear(in_features=500,
+                                 out_features=num_stocks)
+
+#        self.drop0 = nn.Dropout(p=0.2)
+#        self.drop1 = nn.Dropout(p=0.2)
 
         self.hidden_cell = (torch.zeros(num_layers, 2, hidden_size).to(device),
                             torch.zeros(num_layers, 2, hidden_size).to(device))
@@ -91,6 +104,10 @@ class LstmOhlcvModel(nn.Module):
 
         lstm_out, self.hidden_cell = self.lstm(x, self.hidden_cell)
         y = self.linear(lstm_out)
+        y = F.relu(y)
+        y = self.linear2(y)
+        y = F.relu(y)
+        y = self.linear3(y)
 
         return y[:, -1, :]
 
@@ -191,6 +208,7 @@ def test(model, device, test_loader):
 
 data_path = Path(__file__).absolute().parents[2] / 'data'
 
+print('Setting up train data loader...')
 train_loader = DataLoader(
     Windowed10Dataset(data_path=data_path,
                       num_samples=train_size,
@@ -200,6 +218,7 @@ train_loader = DataLoader(
     batch_size=train_batch_size,
     shuffle=True)
 
+print('Setting up test data loader...')
 test_loader = DataLoader(
     Windowed10Dataset(data_path=data_path,
                       num_samples=test_size,
@@ -213,6 +232,7 @@ model = LstmOhlcvModel(num_layers=num_layers, hidden_size=hidden_size,
                        num_stocks=num_stocks,
                        num_attributes=5,
                        device=device)
+model = model.to(device)
 
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
@@ -220,7 +240,7 @@ optimizer = optim.Adam(model.parameters(), lr=1e-4)
 for epoch in range(epochs):
     train(model, device, train_loader, optimizer, epoch)
     test(model, device, test_loader)
-    if test_loss_degrade > 9:
-        print('Test loss not improving.')
-        print('Stopping early to prevent overfitting.')
-        break
+#    if test_loss_degrade > 9:
+#        print('Test loss not improving.')
+#        print('Stopping early to prevent overfitting.')
+#        break
