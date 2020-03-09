@@ -3,6 +3,8 @@ from .database_connector import DatabaseConnector
 import sqlite3
 import re
 from pathlib import Path
+import pandas as pd
+import numpy as np
 
 
 class SQLite3Connector(DatabaseConnector):
@@ -207,7 +209,8 @@ class SQLite3Connector(DatabaseConnector):
     def select(self,
                table: str,
                w_columns: List[str] = None,
-               w_filter: str = None) -> List[Tuple[Union[int, str, float], ...]]:
+               w_filter: str = None,
+               output=None) -> List[Tuple[Union[int, str, float], ...]]:
         """
         Gets data from database with specified columns and optional filter.
 
@@ -238,6 +241,10 @@ class SQLite3Connector(DatabaseConnector):
                 return None
 
             else:
+
+                if output == 'pandas':
+                    assert(False)
+
                 return result
 
         # Columns were specified; return only selected columns.
@@ -258,7 +265,16 @@ class SQLite3Connector(DatabaseConnector):
                 raise e
 
             else:
-                return result
+
+                if output == 'pandas':
+                    res = dict()
+                    for i, col in enumerate(w_columns):
+                        res[col] = np.array([row[i] for row in result])
+
+                    return pd.DataFrame(res)
+
+                else:
+                    return result
 
     def delete(self, table: str, w_filter: str = None):
         """

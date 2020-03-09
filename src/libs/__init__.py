@@ -1,1 +1,1 @@
-__all__ = ['db_connectors', 'alphavantage']
+__all__ = ['db_connectors', 'alphavantage', 'datasets']

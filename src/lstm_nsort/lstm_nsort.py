@@ -33,8 +33,6 @@ top_k = 2
 
 
 def _bl_matmul(mat_a, mat_b):
-    #    print(f'mat_a={mat_a.is_cuda}')
-    #    print(f'mat_b={mat_b.is_cuda}')
     return torch.einsum('mij,jk->mik', mat_a, mat_b)
 
 

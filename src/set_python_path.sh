@@ -1,3 +1,3 @@
 #!/bin/bash
 
-export PYTHONPATH=$HOME/repos/jmnel/neuralsort/src/libs:$PYTHONPATH
+export PYTHONPATH=$HOME/repos/jmnel/neuralsort2/src/libs:$PYTHONPATH
