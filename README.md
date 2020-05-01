@@ -42,6 +42,12 @@ For a given stock, the following preprocessing steps are applied:
 | --------- | ----------- | ----- |
 | Kurtosis      | 7.25 | 3.00 |
 
+### IGMM estimated parameters **𝜏ₓ** = ( μₓ, σₓ, δₓ )
+
+|μₓ | σₓ | δₓ |
+| --- | --- | --- |
+| 5.10E-2 | 7.77E-1 | 1.48E-1 |
+
 ## Road map
 
 - [x] PyTorch implementation of Neuralsort
