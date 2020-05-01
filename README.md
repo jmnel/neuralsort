@@ -32,6 +32,12 @@ For a given stock, the following preprocessing steps are applied:
 
 <img src="figures/figure1-1.png" width=450 height=450>
 
+Generally, the log-returns of our dataset show heavy tails with large kurtosis > 10. A generative model 
+(eg. GAN) produces tails which fall at least at a square-exponential rate[2]. It is probable that this limitation of GANs
+extends to other neural network models. Intuitively, the heavy tails represent the extreme values of the log-return process.
+It is reasonible to think that models such as WaveNet will fail to model these values. In brief experiments, with a GAN,
+this limitation was witnessed, but more work is needed.
+
 #### Figure 1.2: "Gaussianized" log-returns
 
 <img src="figures/figure1-2.png" width=450 height=450>
