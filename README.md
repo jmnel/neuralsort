@@ -5,13 +5,13 @@ Working code repository for a deep learning stock ranking research project.
 ## Structure of this repository
 
 ```
-src/quandl_import.py  ~ Imports Quandl EOD dataset via bulk download API
-src/datasets  ~ Datasets which subclass torch.utils.data.Dataset
-src/lambertw  ~ Code to "Gaussianize" the dataset[3]
-src/quantgan/preprocess ~ Applies the preprocessing discussed below
-src/quantgan/quantgan_model.py  ~ Framework for GAN model (not done)
-src/nsort.py  ~ PyTorch implementation of [4]
-src/wavenet ~ WaveNet[5] implementation not by me
+src/quandl_import.py ................... Imports Quandl EOD dataset via bulk download API
+src/datasets ........................... Datasets which subclass torch.utils.data.Dataset
+src/lambertw ........................... Code to "Gaussianize" the dataset[3]
+src/quantgan/preprocess ................ Applies the preprocessing discussed below
+src/quantgan/quantgan_model.py ......... Framework for GAN model (not done)
+src/nsort.py ........................... PyTorch implementation of [4]
+src/wavenet ............................ WaveNet[5] implementation not by me
 ```
 
 
