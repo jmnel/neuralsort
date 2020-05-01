@@ -36,6 +36,12 @@ For a given stock, the following preprocessing steps are applied:
 
 <img src="figures/figure1-2.png" width=450 height=450>
 
+### Statistics
+
+| Statistic | Before    | After |
+| --------- | ----------- | ----- |
+| Kurtosis      | 7.25 | 3.00 |
+
 ## Road map
 
 - [x] PyTorch implementation of Neuralsort
