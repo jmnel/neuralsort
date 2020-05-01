@@ -1,0 +1,21 @@
+\begin{thebibliography}{2}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Liu et~al.(2017)Liu, Song, and Yang]{song:1}
+Angqi Liu, Qiang Song, and Steve~Y. Yang.
+\newblock Stock portfolio selection using learning-to-rank algorithms with news
+  sentiment.
+\newblock \emph{s}, 2017.
+
+\bibitem[van~den Oord et~al.(2016)van~den Oord, Dieleman, Zen, Simonyan,
+  Vinyals, Graves, Kalchbrenner, Senior, and Kavukcuoglu]{wavenet:1}
+Aaron van~den Oord, Sander Dieleman, Heiga Zen, Karen Simonyan, Oriol Vinyals,
+  Alex Graves, Nal Kalchbrenner, Andrew Senior, and Koray Kavukcuoglu.
+\newblock Wavenet: A generative model for raw audio.
+\newblock \emph{s}, 2016.
+
+\end{thebibliography}

@@ -30,7 +30,7 @@ train_batch_size = 100
 test_batch_size = 100
 
 epochs = 200
-forecast_window = 100
+forecast_window = 40
 num_stocks = 5
 
 
@@ -94,22 +94,32 @@ class LstmOhlcvModel(nn.Module):
         self.linear3 = nn.Linear(in_features=500,
                                  out_features=num_stocks)
 
+        self.linear4 = nn.Linear(in_features=hidden_size,
+                                 out_features=num_stocks)
+
 #        self.drop0 = nn.Dropout(p=0.2)
 #        self.drop1 = nn.Dropout(p=0.2)
 
-        self.hidden_cell = (torch.zeros(num_layers, 2, hidden_size).to(device),
-                            torch.zeros(num_layers, 2, hidden_size).to(device))
+        self.hidden_cell = (torch.zeros(num_layers, 100, hidden_size).to(device),
+                            torch.zeros(num_layers, 100, hidden_size).to(device))
 
     def forward(self, x):
 
         lstm_out, self.hidden_cell = self.lstm(x, self.hidden_cell)
-        y = self.linear(lstm_out)
-        y = F.relu(y)
-        y = self.linear2(y)
-        y = F.relu(y)
-        y = self.linear3(y)
+#        y = self.linear(lstm_out[:, -1, :])
+#        y = F.relu(y)
+#        y = self.linear2(y)
+#        y = F.relu(y)
+#        y = self.linear3(y)
+        y = self.linear4(lstm_out[:, :, :].flatten())
 
-        return y[:, -1, :]
+#        print(y.shape)
+#        print(y[:, -1, :].shape)
+#        exit()
+
+        return y
+
+#        return y[:, -1, :]
 
 
 def train(model, device, train_loader, optimizer, epoch):

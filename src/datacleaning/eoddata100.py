@@ -42,7 +42,7 @@ symbols = list(symbols_min.intersection(symbols_max, symbols_with_max))
 
 random.shuffle(symbols)
 
-n = 10
+n = 100
 
 symbols = symbols[: n]
 

@@ -1,0 +1,1 @@
+Search.setIndex({docnames:["index","lambertw"],envversion:53,filenames:["index.rst","lambertw.rst"],objects:{},objnames:{},objtypes:{},terms:{content:0,index:0,lambert:0,modul:0,page:0,search:0},titles:["Neuralsort Ranking","Lambert W"],titleterms:{indic:0,lambert:1,neuralsort:0,rank:0,tabl:0}})

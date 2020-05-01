@@ -1,0 +1,330 @@
+\documentclass[8pt,oneside]{extbook}
+
+%\usepackage{subfigure}
+\usepackage{subcaption}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{hyperref}
+\usepackage{adjustbox}
+\usepackage{listings}
+\usepackage{optidef}
+\usepackage{cleveref}
+\usepackage{threeparttable}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{mathrsfs}
+\usepackage[gen]{eurosym}
+\usepackage[driver=pdftex]{geometry}
+\usepackage{import}
+\usepackage{tabu}
+%\usepackage{titleformat{\section
+%        {\normalfont\normalzie\bfseries}{Helo.}{1em}{}
+
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\crefname{table}{table}{table}
+\setlength{\parindent}{0em}
+\setlength{\parskip}{0.7em}
+
+%\counterwithin{table}{section}
+ 
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\newlist{syms}{itemize}{1}
+\setlist[syms,1]{label=,labelwidth=0.25in,align=parleft,itemsep=0.1\baselineskip,leftmargin=!}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\newtheorem{proof}{Proof}
+ 
+\lstset{style=mystyle}
+
+%\usepackage[margin=0.5in]{geometry}
+\usepackage{inputenc}
+
+\newcommand{\Real}{\mathbb{R}}
+\newcommand{\Int}{\mathbb{Z}}
+\newcommand{\Nat}{\mathbb{N}}
+\newcommand{\Complex}{\mathbb{C}}
+\newcommand{\vect}[1]{\boldsymbol{#1}}
+
+%\renewcommand{\TPTminimum}{\textwidth}
+
+\renewcommand{\Re}[1]{\mathfrak{Re}\left\lbrace{#1}\right\rbrace}
+\renewcommand{\Im}[1]{\mathfrak{Im}\left\lbrace{#1}\right\rbrace}
+
+%\DeclareMathOperator*{\minimize}{minimize}
+\DeclareMathOperator*{\sgn}{sgn}
+\DeclareMathOperator*{\argmax}{argmax\:}
+
+%\title{{\bf MATH 3172 3.0\\ Combinatorial Optimization}\\\vspace{10pt} \large Final Exam
+%    \author{Jacques Nel}
+%}
+
+\title{{Research Notes}\\\vspace{10pt}
+    \author{Jacques Nel}
+}
+
+\begin{document}
+
+\maketitle
+
+\thispagestyle{empty}
+
+\newpage
+
+\pagenumbering{arabic}
+
+\chapter{One}
+\section{Lambert W transform}
+
+Lambert's $W$ function is the inverse of $z=u\exp(u)$, ie. the function that satisfies
+
+\begin{equation}
+W(z)\exp(W(z))= z
+\end{equation}
+
+Let $U$ be a continous RV with cdf $F_U (u|\vect{\beta})$,
+pdf $f_U(u|\vect{\beta})$, and parameter vector $\theta=(\vect{\beta},\delta)$, then
+
+\begin{equation}
+Z = U\exp\left(\frac{\delta}{2}U^2\right),\quad\delta\in\Real
+\end{equation}
+
+is a non-central, non-scaled heavy tail Lambert $W\times F_X$ RV with
+parameter vector $\theta=(\vect{\beta},\delta)$, where $\delta$ is the
+tail parameter.
+
+For a continuous location-scale family RV $X~F_X(x|\vect{\beta})$ define a
+location-scale heavy-tailed Lambert $W\times F_X$ RV
+
+\begin{equation}\label{eq:trans}
+Y=\left\lbrace U\exp\left(\frac{\delta}{2}U^2\right)\right\rbrace
+\sigma_x+\mu_x,\quad\delta\in\Real
+\end{equation}
+
+Let $X~F_X(x|\vect{\beta})$ be continuous scale-family RV, with
+standard deviation $\sigma_x$, let $U=X/\sigma_x$, then
+
+\begin{equation}
+Y=X\exp\left(\frac{\delta}{2}U^2\right),\quad\delta\in\Real,
+\end{equation}
+
+is a heavy-tailed Lambert $W\times F_X$ RV with parameter 
+$\theta=(\vect{\beta},\delta)$.
+
+Let $\tau:=(\mu_x(\vect{\beta}),\sigma_x(\vect{\beta}))$ define transformation
+\cref{eq:trans}.
+
+\newpage
+
+\subsection{Inverse transform: ``Gaussianize'' heavy-tailed data}
+
+The inverse transformation of \cref{eq:trans} is
+
+\begin{equation}
+W_\tau(Y):=W_\delta\left(\frac{Y-\mu_x}{\sigma_x}\right)\sigma_x
++\mu_x = U\sigma_x+\mu_x=X
+\end{equation}
+
+with
+
+\begin{equation}
+W_\delta(z,\delta) := \sgn(z)\left(\frac{W(\delta z^2)}{\delta}\right)^{1/2}.
+\end{equation}
+
+$W_\delta(z)$ is bijective for $\forall \delta>0$ and $\forall z\in\Real$.
+
+\subsection{Maximum Likelihood Estimation (MLE)}
+
+Let
+
+$$
+z=\frac{y-\mu_x}{\sigma_x},
+u=W_\delta(z),
+\text{ and }
+x=W_\tau(y)=u\sigma_x+\mu_x.
+$$
+
+The cdf and pdf of a location-scale heavy tail lambert 
+$W\times F_X$ RV $Y$ are given by
+
+\begin{equation}
+    G_Y(y|\vect{\beta},\delta) = F_X(W_\delta(z)\sigma_x+\mu_x|\vect{\beta}),
+\end{equation}
+
+and
+
+\begin{equation}
+    g_Y(y|\vect{\beta},\delta)=f_X\left(
+        W_\delta\left(\frac{y-\mu_x}{\sigma_x}\right)
+    \sigma_x+\mu_x |\vect{\beta}\right)
+    \cdot
+    \frac{W_\delta\left(\frac{y-\mu_x}{\sigma_x}\right)}
+    {\frac{y-\mu_x}{\sigma_x}\left(1+W\left(\delta\left(\frac{y-\mu_x}{\sigma_x}\right)^2\right)
+    \right)}
+\end{equation}
+
+For i.i.d. sampe $\vect{y}~g_Y(y|\vect{\beta},\delta)$ the log-likelihood function
+is
+
+\begin{equation}\label{eq:mle}
+    l(\theta,\vect{y})=
+    \sum_{i=1}^N\log g_Y(y_i|\vect{\beta},\delta).
+\end{equation}
+
+This is an MLE problem, ie.,
+
+\begin{equation}
+    \hat{\theta}_{\mathrm{MLE}}=\left(\hat{\vect{\beta}},\hat{\delta}\right)
+    _{\mathrm{MLE}}=
+    \argmax_{\vect{\beta},\delta}
+    l\left(\vect{\beta},\delta\big|\vect{y}\right)
+\end{equation}
+
+\Cref{eq:mle} can be decomposed as
+
+\begin{equation}
+    l\left(\vect{\beta},\delta\big|\vect{y}\right)=
+    l(\vect{\beta}\big|\vect{x}_\tau)
+    +\mathcal{R}(\tau\big|\vect{y})
+\end{equation}
+
+where
+
+\begin{equation}
+    l(\vect{\beta}|\vect{x}_\tau)
+    =
+    \sum_{i=1}^N\log f_X\left(W_\delta\left(\frac{y_i-\mu_x}{\sigma_x}\right)
+    \sigma_x +\mu_x\big|\vect{\beta}\right)
+    =
+\sum_{i=1}^N\log f_X\left(\vect{x}_\tau|\vect{\beta}\right)
+\end{equation}
+
+is the log-likelihood of the back-transformed data $\vect{x}_\tau$, and
+
+\begin{equation}
+    \mathcal{R}(\tau\big|\vect{y})
+    =
+\sum_{i=1}^N\log R\left(\mu_x,\sigma_x,\delta\big|y_i\right)
+\end{equation}
+
+with
+
+\begin{equation}
+    R(\mu_x,\sigma_x,\delta|y_i)
+    =
+    \frac{W_\delta\left(\frac{y_i-\mu_x}{\sigma_x}\right)}
+    {\frac{y-\mu_x}{\sigma_x}\left(
+            1+\delta\left(W_\delta\left(\frac{y_i-\mu_x}{\sigma_x}\right)\right)^2
+    \right)}
+\end{equation}
+
+\subsection{Gradient descent}
+
+Let $z_i=\frac{y_i-\mu_x}{\sigma_x}$.
+
+$$
+\frac{\partial}{\partial \mu_x}l(\vect{\beta}|\vect{x}_\tau)
+=
+\sum_{i=1}^N\left[
+\left(1-\frac{\sigma_x W(z_i^2)\sgn(y_i-\mu_x)}
+    {
+        \delta(y_i-\mu_x)\left(\frac{W(\delta z_i^2)}{\delta}\right)^{1/2}
+        \left(1+W(\delta z_i^2)\right)\sgn\sigma_x
+    }
+    {
+-
+\frac{\sigma_x\left(\frac{W(\delta z_i^2)}{\delta}\right)^{1/2}
+    2\gamma(y_i-\mu_x)
+}{\sgn \sigma_x}
+    }
+    \right)\right.
+$$
+
+$$
+\left.\bigg/\left(
+    \mu_x+\frac{
+\sigma_x\left(\frac{W(\delta z_i^2)}{\delta}\right)^{1/2}
+\sgn(y_i-\mu_x)}{\sgn\sigma_x}
+\right)
+\right]
+$$
+
+$$
+\frac{\partial}{\partial \sigma_x}l(\vect{\beta}|\vect{x}_\tau)
+=
+\sum_{i=1}^N\left[
+\left(
+\frac{\left(\frac{W(\delta z_i^2)}{\delta}\right)^{1/2}
+\sgn(y_i-\mu_x)}
+{\sgn\sigma_x}
+-
+\frac{W(\delta z_i^2)\sgn(y_i-\mu_x)}
+{\delta\left(\frac{W(\delta z_i^2)}{\delta}\right)^{1/2}
+\left(1+W(\delta z_i^2\right)
+\sgn\sigma_x}
+\right.
+\right.
+$$
+
+$$\left.
+\left.
+    -\frac{\sigma_x\left(\frac{W(\delta z_i^2)}{\delta}\right)^{1/2}
+    \sgn(y_i-\mu_x)2\gamma(\sigma_x)}
+    {\sgn^2\sigma_x}
+\right)
+\bigg/\left(
+\mu_x+
+\frac{\sigma_x\left(\frac{W(\delta z_i^2)}{\delta}\right)^{1/2}\sgn(y_i-\mu_x)}
+{\sgn\sigma_x}
+\right)
+\right]
+$$
+
+$$
+\frac{\partial}{\partial \delta}l(\vect{\beta}|\vect{x}_\tau)
+=
+\sum_{i=1}^N\left[
+    \frac{
+        \sigma_x\left(-\frac{W(\delta z_i^2)}{\delta^2}
+            +\frac{W(\delta z_i^2)}{\delta^2(1+W(\delta z_i^2))}
+        \right)
+    }{
+    2\left(\frac{W(\delta z_i^2)}{\delta}\right)^{1/2}
+    \left(
+        \mu_x+\frac{
+            \sigma\left(\frac{W(\delta z_i^2)}{\delta}\right)^{1/2}
+        \sgn(y_i-\mu_x)}
+        {\sgn\sigma_x}
+    \right)
+    \sgn\sigma_x
+}
+\right]
+$$
+
+\end{document}
