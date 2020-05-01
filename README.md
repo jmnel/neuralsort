@@ -52,7 +52,7 @@ For a given stock, the following preprocessing steps are applied:
 
 | Score | p-value | 1% | 5% | 10% |
 | --- | --- | --- | --- | --- |
-| -62.1 | |0.0 | -3.44 | -2.86 | -2.57 |
+| -62.1 |0.0 | -3.44 | -2.86 | -2.57 |
 
 ## Road map
 
