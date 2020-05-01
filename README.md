@@ -62,7 +62,7 @@ this limitation was witnessed, but more work is needed.
 
 Figure 1.2 appears approximately normal. The kurtosis of the back transformed **x** shows that the heavy tails have
 been successfully removed by Lambert W inverse transform discussed in [3]. The results of the ADF test support the
-notion that our preprocessed data is stationary.
+notion that our preprocessed data is stationary. (More work needed to confirm correct lags)
 
 ## Road map
 
