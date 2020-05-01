@@ -30,7 +30,7 @@ For a given stock, the following preprocessing steps are applied:
 
 ### Figure 1.1: Log-returns exhibit heavy tails
 
-<img src="figures/figure1-1.png width=450 height=450">
+<img src="figures/figure1-1.png" width=450 height=450">
 
 ## Road map
 
