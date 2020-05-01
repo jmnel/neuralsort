@@ -60,6 +60,10 @@ this limitation was witnessed, but more work is needed.
 | --- | --- | --- | --- | --- |
 | -62.1 |0.0 | -3.44 | -2.86 | -2.57 |
 
+Figure 1.2 appears approximately normal. The kurtosis of the back transformed **x** shows that the heavy tails have
+been successfully removed by Lambert W inverse transform discussed in [3]. The results of the ADF test support the
+notion that our preprocessed data is stationary.
+
 ## Road map
 
 - [x] PyTorch implementation of Neuralsort
