@@ -48,6 +48,12 @@ For a given stock, the following preprocessing steps are applied:
 | --- | --- | --- |
 | 5.10E-2 | 7.77E-1 | 1.48E-1 |
 
+### Augumented Dickey-Fuller test
+
+| p-value | 1% | 5% | 10% |
+| --- | --- | --- | --- |
+|0.0 | -3.44 | -2.86 | -2.57 |
+
 ## Road map
 
 - [x] PyTorch implementation of Neuralsort
