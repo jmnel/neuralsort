@@ -10,7 +10,7 @@ A universe of n = 2023 stock daily close prices are evaluated over roughly 20 ye
 we calculate log-returns,
 <img src="http://www.sciweavers.org/tex2img.php?eq=%28x_t%29%20%3D%20%5Clog%20x_t%20-%20%5Clog%20x_%7Bt-1%7D.&bc=White&fc=Black&im=png&fs=12&ff=arev&edit=0" align="center" border="0" alt="(x_t) = \log x_t - \log x_{t-1}." width="192" height="19" />
 
-<img src="https://raw.githubusercontent.com/jmnel/neuralsort/master/figures/figure1-1.png" align="center" width="400" height="500" />
+<img src="https://raw.githubusercontent.com/jmnel/neuralsort/master/figures/figure1-1.png" align="center" width="500" height="500" />
 
 ## Road map
 
