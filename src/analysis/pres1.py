@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
-plt.style.use('ggplot')
+# plt.style.use('ggplot')
 import seaborn
 
 import settings
@@ -53,7 +53,7 @@ WHERE symbol == ? ORDER BY date;
         x_norm1_comb += x[1]
 
     sym = symbols[0]
-    seaborn.distplot(data[sym][0], bins=200)
+    seaborn.distplot(data[sym][0], bins=100)
 
 #    plt.tight_layout()
-    plt.savefig('../figures/figure1-1.png', dpi=200)
+    plt.savefig('../figures/figure1-1.png')
