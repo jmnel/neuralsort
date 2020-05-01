@@ -32,6 +32,10 @@ For a given stock, the following preprocessing steps are applied:
 
 <img src="figures/figure1-1.png" width=450 height=450>
 
+### Figure 1.2: "Gaussianized" log-returns
+
+<img src="figures/figure1-2.png" width=450 height=450>
+
 ## Road map
 
 - [x] PyTorch implementation of Neuralsort

@@ -1,5 +1,6 @@
 import sqlite3
 from random import shuffle
+import json
 
 import numpy as np
 import matplotlib
@@ -23,7 +24,7 @@ with sqlite3.connect(settings.DATA_DIRECTORY / settings.DATABASE_NAME) as db:
     print(len(rows))
 
     symbols = [row[0] for row in rows]
-    meta = [row[1] for row in rows]
+    meta = [json.loads(row[1]) for row in rows]
 
     data = dict()
 
@@ -57,3 +58,13 @@ WHERE symbol == ? ORDER BY date;
 
 #    plt.tight_layout()
     plt.savefig('../figures/figure1-1.png')
+
+    plt.clf()
+
+    log_return = data[sym][0]
+    x_norm2 = data[sym][3]
+
+    seaborn.distplot(x_norm2, bins=100, color='C1')
+    plt.savefig('../figures/figure1-2.png')
+
+    print(meta[0])
