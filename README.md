@@ -28,7 +28,7 @@ For a given stock, the following preprocessing steps are applied:
 4. Normalize to unit variance and mean 0 a second time
 5. Apply rolling window of stride 1 and length equal to the receptive field of the WaveNet network.
 
-### Figure 1.1: Log-returns exhibit heavy tails
+##### Figure 1.1: Log-returns exhibit heavy tails
 
 <img src="figures/figure1-1.png" width=450 height=450>
 
