@@ -4,13 +4,15 @@ Working code repository for a deep learning stock ranking research project.
 
 ## Evaluating data
 
-A universe of n = 2023 stock daily close prices are evaluated over roughly 20 years. For a time series
-<img src="https://quicklatex.com/cache3/92/ql_48b66da56f8e93f8695622ca32977d92_l3.png" align="center" border="0" alt="(s_t) \in\mathbb{R},\quad\text{for } 1 < t\in\mathbb{Z}," width="337" height="18" />
+A universe of n = 2023 stock daily close prices are evaluated over roughly 20 years.
 
-we calculate log-returns,
-<img src="http://www.sciweavers.org/tex2img.php?eq=%28x_t%29%20%3D%20%5Clog%20x_t%20-%20%5Clog%20x_%7Bt-1%7D.&bc=White&fc=Black&im=png&fs=12&ff=arev&edit=0" align="center" border="0" alt="(x_t) = \log x_t - \log x_{t-1}." width="192" height="19" />
+For a given stock, the following preprocessing steps are applied:
 
-<img src="https://raw.githubusercontent.com/jmnel/neuralsort/master/figures/figure1-1.png" align="center" width="500" height="500" />
+1. Log-returns are calculated
+2. Normalize to unit variance and mean 0
+3. Apply inverse Lambert W transform as described in [3]. This removes the heavy tails from our data.
+4. Normalize to unit variance and mean 0 a second time
+5. Apply rolling window of stride 1 and length equal to the receptive field of the WaveNet network.
 
 ## Road map
 
