@@ -5,9 +5,7 @@ Working code repository for a deep learning stock ranking research project.
 ## Evaluating data
 
 A universe of n = 2023 stock daily close prices are evaluated over roughly 20 years. For a time series
-$$
-(s_t) \in\mathbb{R},\quad\text{for } 1 < t\in\mathbb{Z},
-$$
+<img src="http://www.sciweavers.org/tex2img.php?eq=%28s_t%29%20%5Cin%5Cmathbb%7BR%7D%2C%5Cquad%5Ctext%7Bfor%20%7D%201%20%3C%20t%5Cin%5Cmathbb%7BZ%7D%2C&bc=White&fc=Black&im=png&fs=12&ff=arev&edit=0" align="center" border="0" alt="(s_t) \in\mathbb{R},\quad\text{for } 1 < t\in\mathbb{Z}," width="337" height="18" />
 
 we calculate log-returns,
 $$
