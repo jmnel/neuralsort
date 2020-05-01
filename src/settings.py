@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import re
 
@@ -10,7 +11,7 @@ EODDATA_DATABASE_NAME = 'eoddata.db'
 IMPORT_QUANDL_RAW = True
 
 
-QUANDL_API_KEY = 'yRyzMHs_wg6bMPAcExUS'
+QUANDL_API_KEY = os.getenv('QUANDL_API_KEY')
 
 #NASDAQ_TEST_TICKERS = ['ZVZZT']
 
