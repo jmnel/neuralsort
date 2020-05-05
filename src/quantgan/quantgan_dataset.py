@@ -12,13 +12,22 @@ import torch
 
 import settings
 
+import matplotlib
+matplotlib.use('Qt5Cairo')
+import matplotlib.pyplot as plt
+plt.style.use('ggplot')
+import seaborn
+
 
 class QuantGanDataset:
 
-    def __init__(self):
+    def __init__(self, window_lenth=100):
 
         super().__init__()
 
+        self.window_lenth = window_lenth
+
+        # Get list of tickers and associated meta data from database.
         with sqlite3.connect(settings.DATA_DIRECTORY / settings.DATABASE_NAME) as db:
 
             rows = db.execute('''
@@ -36,6 +45,18 @@ SELECT symbol, meta_json FROM quantgan_meta;
                 json_meta = json.loads(json_meta)
                 self.meta_info[symbol] = json_meta
 
+        # Generate rolling window lookup table.
+        lookup_table = list()
+
+        for sym in self.symbols_list:
+
+            num_days = self.meta_info[sym]['num_days']
+            for offset in range(0, num_days - window_lenth + 1):
+                assert offset + window_lenth <= num_days
+                lookup_table.append((sym, self.meta_info[sym], offset))
+
+        self.lookup_table = lookup_table
+
     def __getitem__(self, idx):
 
         if torch.is_tensor(idx):
@@ -46,22 +67,31 @@ SELECT symbol, meta_json FROM quantgan_meta;
 
         with sqlite3.connect(settings.DATA_DIRECTORY / settings.DATABASE_NAME) as db:
 
-            x = list()
-            meta = list()
+            x_list = list()
+            symbols_list = list()
+            meta_list = list()
 
             for i in idx:
-                symbol = self.symbols_list[i]
+
+                sym, meta, offset = self.lookup_table[i]
+
                 rows = db.execute('''
 SELECT x_norm2 FROM quantgan_data WHERE symbol == ? ORDER BY date;
-''', (symbol,)).fetchall()
+''', (sym,)).fetchall()
 
-                rows = rows[-4096:]
+                rows = rows[offset:offset + self.window_lenth]
+                assert len(rows) == self.window_lenth
 
-                rows = list(row[0] for row in rows)
+                rows = list(r[0] for r in rows)
 
-                x.append(torch.FloatTensor(rows).reshape(1, 4096))
-                meta.append(self.meta_info[symbol])
+                x_list.append(torch.FloatTensor(
+                    rows).reshape(1, self.window_lenth))
+                meta_list.append(self.meta_info[sym])
+                symbols_list.append(sym)
 
-            x = torch.cat(x, axis=1)
+        x = torch.cat(x_list, axis=1)
 
-            return x, meta, tuple(self.symbols_list[i] for i in idx)
+        return x, meta_list, symbols_list
+
+    def __len__(self):
+        return len(self.lookup_table)

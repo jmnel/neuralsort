@@ -128,8 +128,12 @@ WHERE symbol = ?;
             if symbol in skip_list:
                 continue
 
-            dates = dates[1:]
+#            dates = dates[1:]
             dates = [d[0] for d in dates]
+
+            start_date = dates[0]
+            end_date = dates[-1]
+            num_days = len(dates)
 
             symbol = symbol[0]
 
@@ -162,6 +166,9 @@ WHERE symbol = ?;
                 continue
 
             meta = {
+                'num_days': num_days,
+                'start_date': start_date,
+                'end_date': end_date,
                 's_init': s_init,
                 'mean1': mean1,
                 'std1': std1,
@@ -186,6 +193,19 @@ WHERE symbol = ?;
 
             meta_json = json.dumps(meta)
 
+            if not np.all(np.isfinite(x)):
+                print(f'Series x for {symbol} has invalid number')
+                continue
+            if not np.all(np.isfinite(x_norm1)):
+                print(f'Series x_norm1 for {symbol} has invalid number')
+                continue
+            if not np.all(np.isfinite(x_gaus)):
+                print(f'Series x_gaus for {symbol} has invalid number')
+                continue
+            if not np.all(np.isfinite(x_norm2)):
+                print(f'Series x_norm2 for {symbol} has invalid number')
+                continue
+
             data = [(symbol, dates[i], x[i], x_norm1[i], x_gaus[i], x_norm2[i])
                     for i in range(len(x))]
 
@@ -206,15 +226,7 @@ INSERT INTO quantgan_data(
 ''', data)
 
             db.commit()
-
-#            for k, v in adf1[4].items():
-#                print(f'{k} : {v}')
-#            for k, v in adf2[4].items():
-#                print(f'{k} : {v}')
             bar.next()
-#            exit()
-
-#            print(f'k1: {kurtosis1}, k2: {kurtosis2}')
 
         bar.finish()
 
@@ -235,36 +247,3 @@ INSERT INTO quantgan_data(
 
 pre = Preprocessor(rebuild=True)
 pre.run()
-
-
-# symbol, s = next(iter(loader))[0]
-
-# s = s[0].numpy()
-
-# x, s0 = log_returns(s)
-
-# x_norm, mean1, std1 = normalize(x)
-
-# ax2 = plt.subplot(2, 2, 2)
-# seaborn.distplot(x_norm, bins=200, ax=ax2)
-
-# x_gaus, tau = inv_lambert_w(x_norm)
-
-# x_norm2, mean2, var2 = normalize(x_gaus)
-
-# ax3 = plt.subplot(2, 2, 3)
-# seaborn.distplot(x_gaus, bins=200, ax=ax3)
-
-# ax4 = plt.subplot(2, 2, 4)
-# seaborn.distplot(x_norm2, bins=200, ax=ax4)
-
-# k1 = kurtosis(x_norm, fisher=False, bias=False)
-# k2 = kurtosis(x_norm2, fisher=False, bias=False)
-
-# print(f'k1: {k1}, k2: {k2}')
-
-# plt.show()
-
-# symbol, s = next(iter(loader))
-
-# print(symbol)
