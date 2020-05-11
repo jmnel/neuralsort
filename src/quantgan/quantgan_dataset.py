@@ -19,7 +19,7 @@ plt.style.use('ggplot')
 import seaborn
 
 
-class QuantGanDataset:
+class QuantGanDataset(Dataset):
 
     def __init__(self, window_lenth=100):
 
@@ -95,3 +95,13 @@ SELECT x_norm2 FROM quantgan_data WHERE symbol == ? ORDER BY date;
 
     def __len__(self):
         return len(self.lookup_table)
+
+    class SmallView(Dataset):
+
+        def __init__(self, parent):
+
+            self.lookup_table = parent.lookup_table.copy()
+            shuffle(self.lookup_table)
+
+        def __len__(self):
+            pass

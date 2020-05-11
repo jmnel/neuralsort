@@ -3,10 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd.variable import Variable
 
-from .wavenet_modules import *
+from wavenet_modules import *
 
 
-class WaveNetModel(nn.Module):
+class WaveNetNN(nn.Module):
 
     def __init__(self,
                  layers=10,
@@ -21,6 +21,8 @@ class WaveNetModel(nn.Module):
                  kernel_size=2,
                  bias=False):
 
+        super().__init__()
+
         self.layers = layers
         self.blocks = blocks
         self.dilation_channels = dilation_channels
@@ -31,8 +33,6 @@ class WaveNetModel(nn.Module):
         self.output_channels = output_channels
         self.output_length = output_length
         self.kernel_size = kernel_size
-
-        super(WaveNetModel, self).__init__()
 
         # Build the model.
         receptive_field = 1
@@ -120,10 +120,6 @@ class WaveNetModel(nn.Module):
             (dilation, init_dilation) = self.dilations[i]
 
             x_residual = dilation_func(x, dilation, init_dilation, i)
-
-            print(i)
-            print(x.shape)
-            print(self.filter_convs[i].kernel_size)
 
             # Dilated convolution
             x_filter = self.filter_convs[i](x_residual)

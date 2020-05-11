@@ -8,7 +8,7 @@ from wavenet.wavenet_model import WaveNetModel
 from quantgan_dataset import QuantGanDataset
 
 
-class Innovation(nn.Module):
+class InnovationNN(nn.Module):
 
     def __init__(self):
 
@@ -31,7 +31,7 @@ class Innovation(nn.Module):
         return x
 
 
-class Generator(nn.Module):
+class GeneratorNN(nn.Module):
 
     def __init__(self):
 
@@ -62,26 +62,34 @@ class Generator(nn.Module):
     def forward(self,
                 x_input):
 
-        x = self.tcn(x_input)
+        mu = self.drift_tcn(x_input[:, 0:1, :])
+        vol = self.volatiliy_tcn(x_input[:, 1:2, :])
+        eps = self.innov(x_input[:, 2, -1])
 
-        pprint(x)
+        y = mu + vol * eps
 
-        print(x.shape)
-        pass
+        return y
+
+#        print(x.shape)
+#        pass
+
+    def generate(self):
+
+        self.drift_tcn(
 
 #    def generate(self):
 
 #        self.tcn.generate(12)
 
 
-m = Generator()
-#q = m.generate()
+m=Generator()
+# q = m.generate()
 
-z = torch.randn((2, 1, 4093))
+z=torch.randn((2, 1, 4093))
 
-data = QuantGanDataset()
-x, meta, symbols = next(iter(data))
+data=QuantGanDataset()
+x, meta, symbols=next(iter(data))
 
-x = x.view(1, 1, 4096)
+x=x.view(1, 1, 4096)
 
-y = m(x)
+y=m(x)

@@ -7,104 +7,116 @@ from torch.autograd import Variable, Function
 import numpy as np
 
 
-def dilate(x, dilation, init_dilation=1, pad_start=True):
+def dilate(x,
+           dilation,
+           init_dilation=1,
+           pad_start=True):
 
-    [n, c, l] = x.size()
+    [n, c, t] = x.shape
     dilation_factor = dilation / init_dilation
     if dilation_factor == 1:
         return x
 
-    # Add zero padding for reshaping.
-    new_l = int(np.ceil(l / dilation_factor) * dilation_factor)
-    if new_l != l:
-        l = new_l
-        x = constant_pad_1d(x, new_l, dimension=2, pad_start=pad_start)
+    # Add zero padding before reshape operation.
+    t_new = int(np.ceil(t / dilation_factor) * dilation_factor)
 
-    l_old = int(round(l / dilation_factor))
+    if t_new != t:
+        t = t_new
+        x = const_pad_1d(x,
+                         t_new,
+                         dim=2,
+                         pad_start=pad_start)
+
+    t_old = int(round(t / dilation_factor))
     n_old = int(round(n * dilation_factor))
-    l = math.ceil(l * init_dilation / dilation)
+
+    t = math.ceil(t * init_dilation / dilation)
     n = math.ceil(n * dilation / init_dilation)
 
     # Reshape according to dilation.
-    x = x.permute(1, 2, 0).contiguous()  # (n, c, l) -> (c, l, n)
-    x = x.view(c, l, n)
-    x = x.permute(2, 0, 1).contiguous()  # (c, l, n) -> (n, c, l)
+    x = x.permute(1, 2, 0).contiguous()  # (n, c, t) -> (c, t, n)
+    x = x.view(c, t, n)
+    x = x.permute(2, 0, 1).contiguous()  # (c, t, n) -> (n, c, t)
 
     return x
 
 
-class ConstantPad1d(Function):
+class ConstPad1d(Function):
 
-    def __init__(self,
-                 target_size,
-                 dimension=0,
-                 value=0,
-                 pad_start=False):
+    @staticmethod
+    def forward(ctx,
+                x_input,
+                target_size,
+                dim=0,
+                value=0,
+                pad_start=False):
 
-        super().__init__()
-        self.target_size = target_size
-        self.dimension = dimension
-        self.value = value
-        self.pad_start = pad_start
+        num_pad = target_size - x_input.shape[dim]
 
-#    @staticmethod
-    def forward(self, x_input):
-        self.num_pad = self.target_size - x_input.size(self.dimension)
+        assert num_pad >= 0, 'resulting (target) size must be greater than input size'
 
-        assert self.num_pad >= 0, 'target size has to be greater than input size'
+        x_size = x_input.shape
 
-        self.input_size = x_input.size()
+        # Save arguments to context.
+        ctx.x_size = x_size
+        ctx.num_pad = num_pad
+        ctx.dim = dim
+        ctx.pad_start = pad_start
 
-        size = list(x_input.size())
-        size[self.dimension] = self.target_size
-        x_output = x_input.new(*tuple(size)).fill_(self.value)
+        size = list(x_size)
+        size[dim] = target_size
+
+        x_output = x_input.new(*tuple(size)).fill_(value)
         c_output = x_output
 
         # Crop the output.
-        if self.pad_start:
-            c_output = c_output.narrow(self.dimension,
-                                       self.num_pad,
-                                       c_output.size(self.dimension) - self.num_pad)
+        if pad_start:
+            c_output = c_output.narrow(dim,
+                                       num_pad,
+                                       c_output.shape[dim] - num_pad)
+
         else:
-            c_output = c_output.narrow(self.dimension,
+            c_output = c_output.narrow(dim,
                                        0,
-                                       c_output.size(self.dimension) - self.num_pad)
+                                       c_output.shape[dim] - num_pad)
 
         c_output.copy_(x_input)
         return x_output
 
-#    @staticmethod
-    def backward(self, grad_output):
+    @staticmethod
+    def backward(ctx, grad_output):
 
-        grad_input = grad_output.new(*self.input_size).zero_()
+        grad_input = grad_output.new(*ctx.x_size).zero_()
         cg_output = grad_output
 
-        # Crop the gradient output.
-        if self.pad_start:
-            cg_output = cg_output.narrow(self.dimension,
-                                         self.num_pad,
-                                         cg_output.size(self.dimension) - self.num_pad)
+        # Crop gradient output.
+        if ctx.pad_start:
+            cg_output = cg_output.narrow(ctx.dim,
+                                         ctx.num_pad,
+                                         cg_output.shape[ctx.dim] - ctx.num_pad)
 
         else:
-            cg_output = cg_output.narrow(self.dimension,
+            cg_output = cg_output.narrow(ctx.dim,
                                          0,
-                                         cg_output.size(self.dimension) - self.num_pad)
+                                         cg_output.shape[ctx.dim] - ctx.num_pad)
 
         grad_input.copy_(cg_output)
 
-        return grad_input
+        # Only first input is a variable along which to calculate gradient.
+        return grad_input, None, None, None, None
 
 
-def constant_pad_1d(x_input,
-                    target_size,
-                    dimension=0,
-                    value=0,
-                    pad_start=False):
+def const_pad_1d(x_input,
+                 target_size,
+                 dim=0,
+                 value=0,
+                 pad_start=False):
 
-    return ConstantPad1d(target_size, dimension, value, pad_start)(x_input)
+    # Apply function object to input.
+    return ConstPad1d.apply(x_input, target_size, dim, value, pad_start)
 
 
-class DilatedQueue:
+def DilatedQueue:
 
     def __init__(self,
                  max_length,
@@ -116,19 +128,18 @@ class DilatedQueue:
 
         self.in_pos = 0
         self.out_pos = 0
-        self.num_deq = num_deq
-        self.num_channels = num_channels
-        self.dilation = dilation
         self.max_length = max_length
         self.data = data
+        self.dilation = dilation
+        self.num_deq = num_deq
+        self.num_channels = num_channels
         self.dtype = dtype
 
         if data == None:
             self.data = Variable(dtype(num_channels, max_length).zero_())
 
     def enqueue(self, x_input):
-
-        self.data[:, self.in_pos] = input
+        self.data[:, self.in_pos] = x_input
         self.in_pos = (self.in_pos + 1) % self.max_length
 
     def dequeue(self, num_deq=1, dilation=1):
@@ -145,10 +156,10 @@ class DilatedQueue:
             t = self.data[:, start:self.out_pos + 1:dilation]
 
         self.out_pos = (self.out_pos + 1) % self.max_length
+
         return t
 
     def reset(self):
         self.data = Variable(self.dtype(
             self.num_channels, self.max_length).zero_())
-        self.in_pos = 0
-        self.out_pos = 0
+        self.in_pos, self.out_pos = 0, 0
