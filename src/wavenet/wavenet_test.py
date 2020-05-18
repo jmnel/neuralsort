@@ -4,25 +4,31 @@ import torch.nn.functional as F
 import numpy as np
 from pprint import pprint
 
-from wavenet_modules2 import *
+from wavenet_nn import WaveNetNN
+
+wn_model = WaveNetNN(layers=10,
+                     blocks=4,
+                     dilation_channels=32,
+                     residual_channels=32,
+                     skip_channels=256,
+                     end_channels=256,
+                     classes=1,
+                     #                     input_channels=256,
+                     #                     output_channels=256,
+                     output_length=32,
+                     kernel_size=2)
 
 
-# print(y.shape)
+print(f'rfs: {wn_model.receptive_field}')
+x = torch.randn(1, 256, 4093)
 
-#from wavenet_nn import WaveNetNN
 
-# wn = WaveNetNN(layers=10,
-#               blocks=4,
-#               dilation_channels=32,
-#               residual_channels=32,
-#               skip_channels=256,
-#               end_channels=256,
-#               input_channels=1,
-#               output_channels=1,
-#               kernel_size=1)
+wn_model.eval()
 
-#x = torch.FloatTensor(1, 1, 100)
+#y = wn_model(x)
+#y = wn_model.wavenet(x, dilation_func=wn_model.queue_dilate)
 
-# wn.eval()
+s = torch.randn(5)
 
-#y = wn(x)
+x_hat = wn_model.generate_fast(num_samples=5,
+                               first_samples=s)

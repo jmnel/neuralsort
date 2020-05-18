@@ -15,8 +15,9 @@ class WaveNetNN(nn.Module):
                  residual_channels=32,
                  skip_channels=256,
                  end_channels=256,
-                 input_channels=1,
-                 output_channels=2,
+                 classes=256,
+                 #                 input_channels=1,
+                 #                 output_channels=2,
                  output_length=32,
                  kernel_size=2,
                  bias=False):
@@ -29,8 +30,9 @@ class WaveNetNN(nn.Module):
         self.residual_channels = residual_channels
         self.skip_channels = skip_channels
         self.end_channels = end_channels
-        self.input_channels = input_channels
-        self.output_channels = output_channels
+        self.classes = classes
+#        self.input_channels = input_channels
+#        self.output_channels = output_channels
         self.output_length = output_length
         self.kernel_size = kernel_size
 
@@ -47,7 +49,11 @@ class WaveNetNN(nn.Module):
         self.skip_convs = nn.ModuleList()
 
         # A 1x1 convolution creates input channels by projection.
-        self.start_conv = nn.Conv1d(in_channels=input_channels,
+#        self.start_conv = nn.Conv1d(in_channels=input_channels,
+#                                    out_channels=residual_channels,
+#                                    kernel_size=1,
+#                                    bias=bias)
+        self.start_conv = nn.Conv1d(in_channels=classes,
                                     out_channels=residual_channels,
                                     kernel_size=1,
                                     bias=bias)
@@ -100,8 +106,12 @@ class WaveNetNN(nn.Module):
                                     kernel_size=1,
                                     bias=True)
 
+#        self.end_conv_2 = nn.Conv1d(in_channels=end_channels,
+#                                    out_channels=output_channels,
+#                                    kernel_size=1,
+#                                    bias=True)
         self.end_conv_2 = nn.Conv1d(in_channels=end_channels,
-                                    out_channels=output_channels,
+                                    out_channels=classes,
                                     kernel_size=1,
                                     bias=True)
 
@@ -112,14 +122,20 @@ class WaveNetNN(nn.Module):
 
         x = self.start_conv(x_input)
 
+        print('here')
+        print(x.shape)
+
         skip = 0
 
         # WaveNet layers
         for i in range(self.blocks * self.layers):
+            print(f'layer {i}')
 
             (dilation, init_dilation) = self.dilations[i]
 
             x_residual = dilation_func(x, dilation, init_dilation, i)
+
+            print(f'after dilate: {x_residual.shape}')
 
             # Dilated convolution
             x_filter = self.filter_convs[i](x_residual)
@@ -153,6 +169,18 @@ class WaveNetNN(nn.Module):
         x = dilate(x_input, dilation, init_dilation)
         return x
 
+    def queue_dilate(self, x_input, dilation, init_dilation, i):
+        queue = self.dilated_queues[i]
+
+        print(f'before queue: {x_input.data[0].shape}')
+
+        queue.enqueue(x_input.data[0])
+
+        x = queue.dequeue(num_deq=self.kernel_size, dilation=dilation)
+        x = x.unsqueeze(0)
+
+        return x
+
     def forward(self, x_input):
 
         x = self.wavenet(x_input,
@@ -161,11 +189,11 @@ class WaveNetNN(nn.Module):
         # Reshape the output.
         [n, c, l] = x.shape
 
-        l = self.output_length
-        x = x[:, :, -l:]
+        t = self.output_length
+        x = x[:, :, -t:]
         x = x.transpose(1, 2).contiguous()
 
-#        x = x.view(n, l, c)
+        x = x.view(n * t, c)
 
         return x
 
@@ -177,7 +205,8 @@ class WaveNetNN(nn.Module):
 
         self.eval()
         if first_samples is None:
-            first_samples = torch.LongTensor(1).zero_() + (self.classes // 2)
+            first_samples = torch.LongTensor(
+                1).zero_() + (self.classes // 2)
         first_samples = Variable(first_samples)
 
         # Reset queues.
@@ -188,10 +217,10 @@ class WaveNetNN(nn.Module):
         total_samples = num_given_samples + num_samples
 
         x_input = Variable(torch.FloatTensor(1,
-                                             self.input_channels,
+                                             self.classes,
                                              1).zero_())
-        x_input = x_input.scatter_(1,
-                                   first_samples[0:1].view(1, -1, 1), 1.)
+#        x_input = x_input.scatter_(1,
+#                                   first_samples[0:1].view(1, -1, 1), 1.)
 
         # Fill queues with starting samples.
         for i in range(num_given_samples - 1):
@@ -199,8 +228,8 @@ class WaveNetNN(nn.Module):
                              dilation_func=self.queue_dilate)
 
             x_input.zero_()
-            x_input = x_input.scatter_(1,
-                                       first_samples[i + 1:i + 2].view(1, -1, 1), 1.).view(1, self.classes, 1)
+#            x_input = x_input.scatter_(1,
+#                                       first_samples[i + 1:i + 2].view(1, -1, 1), 1.).view(1, self.classes, 1)
 
         # Generate new samples.
         generated = np.array([])
@@ -210,8 +239,11 @@ class WaveNetNN(nn.Module):
 
         for i in range(num_samples):
 
+            print(x_input.shape)
             x = self.wavenet(x_input,
                              dilation_func=self.queue_dilate).squeeze()
+            exit()
+
 
 #            x -= regularizer
 

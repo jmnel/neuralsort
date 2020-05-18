@@ -8,6 +8,8 @@ DATA_DIRECTORY = ROOT_DIRECTORY / 'data'
 DATABASE_NAME = 'neuralsort.db'
 EODDATA_DATABASE_NAME = 'eoddata.db'
 
+IB_DATABASE_NAME = 'ib_bbo.db'
+
 IMPORT_QUANDL_RAW = True
 
 

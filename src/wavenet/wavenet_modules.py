@@ -116,7 +116,7 @@ def const_pad_1d(x_input,
     return ConstPad1d.apply(x_input, target_size, dim, value, pad_start)
 
 
-def DilatedQueue:
+class DilatedQueue:
 
     def __init__(self,
                  max_length,
@@ -139,7 +139,17 @@ def DilatedQueue:
             self.data = Variable(dtype(num_channels, max_length).zero_())
 
     def enqueue(self, x_input):
+        print(f'in_pos: {self.in_pos}')
+
+        print(f'self data: {self.data.shape}')
+        print(f'max len: {self.max_length}')
+
+        print(f'data set')
+        print(f'lhs: {self.data[:, self.in_pos].shape}')
+        print(f'rhs: {x_input.shape}')
+
         self.data[:, self.in_pos] = x_input
+
         self.in_pos = (self.in_pos + 1) % self.max_length
 
     def dequeue(self, num_deq=1, dilation=1):
