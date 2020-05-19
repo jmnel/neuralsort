@@ -96,9 +96,9 @@ class TickerFilter:
             if tokens[1] in NYSE_POSTFIXES:
                 return False
 
-            # Postic A or B following dot, denotes class A or class B common stock.
-            elif tokens[1] in {'A', 'B'}:
-                pass
+            # Postfix A or B following dot, denotes class A or class B common stock.
+#            elif tokens[1] in {'A', 'B'}:
+#                pass
 
                 #                return True
 

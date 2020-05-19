@@ -37,6 +37,7 @@ DROP TABLE IF EXISTS qdl_eod;
 DROP TABLE IF EXISTS qdl_symbols;
 ''')
 
+    # Create meta table.
     db.execute('''
 CREATE TABLE IF NOT EXISTS qdl_symbols(
     id INTEGER PRIMARY KEY,
@@ -50,6 +51,7 @@ CREATE TABLE IF NOT EXISTS qdl_symbols(
     lifetime_returns FLOAT);
 ''')
 
+    # Create data table.
     db.execute('''
 CREATE TABLE IF NOT EXISTS qdl_eod(
     id INTEGER PRIMARY KEY,
@@ -70,6 +72,7 @@ CREATE TABLE IF NOT EXISTS qdl_eod(
     FOREIGN KEY(symbol_id) REFERENCES qdl_symbols(id)
 );''')
 
+    # Create symbol view.
     db.execute('''
 CREATE INDEX IF NOT EXISTS qdl_eod_symbols_index ON qdl_eod(symbol_id);
 ''')
@@ -91,6 +94,7 @@ def get_quandl_tickers(db: sqlite3.Connection):
     ticker_list = list(
         filter(lambda row: TickerFilter.filter(row[0], row[2], row[3]), ticker_list))
 
+    # Insert list of symbols into meta table.
     db.executemany('''
 INSERT INTO qdl_symbols(symbol, qdl_code, name, exchange, last_trade)
 VALUES(?, ?, ?, ?, ?);
