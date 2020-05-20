@@ -13,9 +13,9 @@ from pathlib import Path
 from pprint import pprint
 import numpy as np
 import quandl
-import matplotlib
-matplotlib.use('Qt5Cairo')
-import matplotlib.pyplot as plt
+#import matplotlib
+# matplotlib.use('Qt5Cairo')
+#import matplotlib.pyplot as plt
 
 from ticker_filter import TickerFilter
 import settings
@@ -144,6 +144,8 @@ SELECT symbol, id, qdl_code FROM qdl_symbols;
 
     tickers = {row[2].split('/')[1]: (row[1], row[0]) for row in tickers}
 
+    # Process the bulk downloaded CSV file; we have to perform buffered write into database,
+    # to limit memory consumption.
     with open(csv_path, newline='') as csv_file:
 
         csv_reader = csv.reader(csv_file, delimiter=',')
@@ -151,29 +153,39 @@ SELECT symbol, id, qdl_code FROM qdl_symbols;
         prev_qdl_code = None
         should_keep = False
 
+        # Buffer properties.
         write_buffer = list()
         buff_max_size = 1e6
 
         for row in csv_reader:
             row_number = csv_reader.line_num
 
+            # Print progress update.
             if row_number % 1e6 == 0:
                 print(f'\t\tParsing row {row_number}')
 
+            # Unpack row from CSV file.
             qdl_code, date, o, h, l, c, v, div, sp, o_adj, h_adj, l_adj, c_adj, v_adj = row
 
+            # Only repeat meta table check when row symbol changes.
             if qdl_code != prev_qdl_code:
                 prev_qdl_code = qdl_code
+
+                # This check is expensive, so we only perform it when the 'Symbol' value changes
+                # from row to row in the CSV file.
                 should_keep = qdl_code in tickers
+
                 if should_keep:
+                    # Get foreign key for current symbol in meta table.
                     sid = tickers[qdl_code][0]
-#                    ticker = tickers[qdl_code][1]
 
             if should_keep:
-                record = (sid, date, o, h, l, c, v, div, sp,
-                          o_adj, h_adj, l_adj, c_adj, v_adj)
-                write_buffer.append(record)
+                # Append row record to write buffer.
+                data_row = (sid, date, o, h, l, c, v, div, sp,
+                            o_adj, h_adj, l_adj, c_adj, v_adj)
+                write_buffer.append(data_row)
 
+            # Write buffer to 'qdl_eod' database table, once buffer is full.
             if len(write_buffer) > buff_max_size:
                 print(f'\t\tWrite buffer reached max size. Writing to database...')
                 db.executemany('''
