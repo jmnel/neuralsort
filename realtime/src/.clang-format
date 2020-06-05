@@ -1,0 +1,23 @@
+---
+BasedOnStyle: Google
+
+AccessModifierOffset: '-4'
+AllowShortFunctionsOnASingleLine: None
+#BinPackArguments: 'false'
+#BinPackParameters: 'false'
+#ExperimentalAutoDetectBinPacking: 'true'
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerAllOnOneLineOrOnePerLine: 'false'
+ColumnLimit: '0'
+Cpp11BracedListStyle: 'true'
+ExperimentalAutoDetectBinPacking: 'true'
+KeepEmptyLinesAtTheStartOfBlocks: 'true'
+IndentWidth: '4'
+NamespaceIndentation: All
+SpaceBeforeParens: Never
+SpacesInParentheses: 'true'
+Standard: Cpp11
+TabWidth: '4'
+UseTab: Never
+
+...

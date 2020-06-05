@@ -3,7 +3,6 @@ import re
 import settings
 
 NYSE_TEST_TICKERS = {'ATEST', 'CTEST', 'MTEST', 'NTEST', 'ZTST'}
-
 NASDAQ_TEST_TICKERS = {'ZAZZT', 'ZBZZT', 'ZJZZT', 'ZVZZT'}
 
 # On NASDAQ a ticker might have a 5 letter name. The 5th letter conveys special meaning.
@@ -11,7 +10,7 @@ NASDAQ_TEST_TICKERS = {'ZAZZT', 'ZBZZT', 'ZJZZT', 'ZVZZT'}
 # B - class B shares
 # C - NextShares ETMF (type of ETF)
 # D - new issue
-# E - used to denote dlinquency in SEC filings
+# E - used to denote delinquency in SEC filings
 # F - foreign issue
 # G - first convertible bond
 # H - second convertible bond
