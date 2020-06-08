@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 3.8 FATAL_ERROR )
-add_definitions( "-std=c++17" )
+add_definitions( "-std=c++20" )
 
 set( CMAKE_CXX_STANDARD 17 )
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
