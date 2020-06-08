@@ -1,18 +1,20 @@
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
-add_definitions("-std=c++17")
+cmake_minimum_required( VERSION 3.8 FATAL_ERROR )
+add_definitions( "-std=c++17" )
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS ON)
-set(CMAKE_BUILD_TYPE Debug)
+set( CMAKE_CXX_STANDARD 17 )
+set( CMAKE_CXX_STANDARD_REQUIRED ON )
+set( CMAKE_CXX_EXTENSIONS ON )
+set( CMAKE_BUILD_TYPE Debug )
 
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+find_program( CCACHE_PROGRAM ccache )
+if( CCACHE_PROGRAM )
+    set_property( GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache )
+    set_property( GLOBAL PROPERTY RULE_LAUNCH_LINK ccache )
 endif()
 
-project(realtime_trader VERSION 0.1 LANGUAGES CXX)
+project( realtime_trader VERSION 0.1 LANGUAGES CXX )
+
+find_package( Boost 1.72 REQUIRED )
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()

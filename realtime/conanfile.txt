@@ -1,5 +1,6 @@
 [requires]
 pcapplusplus/19.12@bincrafters/stable
+boost/1.73.0@conan-center/stable
 
 [generators]
 cmake
