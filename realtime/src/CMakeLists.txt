@@ -14,7 +14,7 @@ endif()
 
 project( realtime_trader VERSION 0.1 LANGUAGES CXX )
 
-find_package( Boost 1.72 REQUIRED )
+find_package( Boost 1.72 REQUIRED COMPONENTS system iostreams )
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
@@ -63,4 +63,5 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${Arcturus_SOURCE_DIR}/../targets/Debug)
 set(CMAKE_MODULE_PATH ${Arcturus_SOURCE_DIR}/cmake/modules)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/client)
+#add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/client)
+add_subdirectory( ${CMAKE_CURRENT_LIST_DIR}/iex_client )

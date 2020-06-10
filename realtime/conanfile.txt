@@ -3,6 +3,9 @@ pcapplusplus/19.12@bincrafters/stable
 OpenSSL/1.1.1c@conan/stable
 libcurl/7.66.0@bincrafters/stable
 zlib/1.2.11@conan/stable
+sqlite3/3.28.0@bincrafters/stable
+sqlitecpp/2.3.0@bincrafters/stable
+nlohmann_json/3.7.3
 
 [generators]
 cmake

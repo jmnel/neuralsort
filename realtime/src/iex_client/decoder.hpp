@@ -5,7 +5,7 @@
 
 #include <memory>
 
-#include "iex_message.hpp"
+#include "message.hpp"
 
 using std::string;
 

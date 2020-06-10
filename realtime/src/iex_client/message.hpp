@@ -82,9 +82,10 @@ namespace jmnel::iex {
     class iex_message_base {
     protected:
         message_type m_type = message_type::no_data;
-        uint64_t m_timestamp;
 
     public:
+        uint64_t m_timestamp;
+
         virtual ~iex_message_base() = default;
 
         virtual bool decode( const uint8_t* data ) = 0;

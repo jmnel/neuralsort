@@ -1,4 +1,4 @@
-#include "iex_message.hpp"
+#include "message.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -255,6 +255,7 @@ namespace jmnel::iex {
 
     std::ostream& operator<<( std::ostream& os, trade_report_message const& msg ) {
         os << msg.type() << endl;
+        os << "  timestmap: " << msg.m_timestamp << endl;
         os << "  symbol: " << msg.m_symbol << endl;
         os << "  price: " << msg.m_price << endl;
         os << "  size: " << msg.m_size << endl;
