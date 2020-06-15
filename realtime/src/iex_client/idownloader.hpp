@@ -11,7 +11,7 @@ namespace jmnel::iex {
     public:
         virtual ~idownloader() = default;
         virtual void request_stop() = 0;
-        virtual void start_download() = 0;
+        virtual void do_download() = 0;
 
         static bool run();
         static bool stop();

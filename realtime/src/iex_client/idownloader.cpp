@@ -31,7 +31,7 @@ namespace jmnel::iex {
 
         signal( SIGINT, handle_sigint );
         singleton = std::make_unique<downloader>();
-        singleton->start_download();
+        singleton->do_download();
 
         return true;
     }

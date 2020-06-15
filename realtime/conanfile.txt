@@ -6,6 +6,7 @@ zlib/1.2.11@conan/stable
 sqlite3/3.28.0@bincrafters/stable
 sqlitecpp/2.3.0@bincrafters/stable
 nlohmann_json/3.7.3
+fmt/6.0.0@bincrafters/stable
 
 [generators]
 cmake
