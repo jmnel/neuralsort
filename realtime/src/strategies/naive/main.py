@@ -167,8 +167,10 @@ def simulate_trading(gumbel_params, last_close, messages):
 
 #    plt.plot(np.array(cash_history), linewidth=0.5)
 #    plt.plot(np.array(value_history), linewidth=0.5)
-    print(f'ending cash: {cash}')
-    print(f'return: {cash-2000}')
+    print(f'ending cash: ${cash}')
+    print(f'return: ${cash-2000}')
+
+    print(f'hold return: ${price_history[-1] - price_history[0]}')
 #    matplotlib.rcParams['figure.dpi'] = 80
     fig, ax = plt.subplots(3, 1)
     ax[0].plot(price_history, linewidth=0.5, color='C2')
