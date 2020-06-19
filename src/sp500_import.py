@@ -8,8 +8,11 @@ import sqlite3
 import io
 
 # https://finance.yahoo.com/quote/%5EGSPC/history?period1=-1325635200&period2=1591747200&interval=1d&filter=history&frequency=1d
-endpoint = 'https://query1.finance.yahoo.com/v7/finance/download/%5EGSPC?/history'
-endpoint += '?period1={}&period2={}&interval=1d&filter=history&frequency=1d'
+endpoint = 'https://query1.finance.yahoo.com/v7/finance/download/%5EGSPC'
+endpoint += '?period1={}&period2={}&interval=1d&events=history'
+
+# https://query1.finance.yahoo.com/v7/finance/download/%5EGSPC?period1=-1325635200&period2=1592179200&interval=1d&events=history
+
 
 period_start = -1325635200
 period_now = datetime.datetime.utcnow()
@@ -23,6 +26,9 @@ period_end = int(period_end.timestamp())
 
 endpoint = endpoint.format(period_start, period_end)
 
+print(endpoint)
+# exit()
+
 db_path = settings.DATA_DIRECTORY / settings.DATABASE_NAME
 
 response = requests.get(endpoint)
@@ -34,6 +40,7 @@ rows = list(reader)
 rows = list((r[0], float(r[1]), float(r[2]), float(r[3]), float(r[4]), float(r[5]), int(r[6]))
             for r in rows)
 
+print(len(rows))
 # exit()
 
 with sqlite3.connect(db_path) as db:

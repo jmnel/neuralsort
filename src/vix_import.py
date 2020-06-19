@@ -8,8 +8,8 @@ import sqlite3
 import io
 
 # https://ca.finance.yahoo.com/quote/%5EVIX/history?period1=631238400&period2=1591747200&interval=1d&filter=history&frequency=1d
-endpoint = 'https://query1.finance.yahoo.com/v7/finance/download/%5EVIX?/history'
-endpoint += '?period1={}&period2={}&interval=1d&filter=history&frequency=1d'
+endpoint = 'https://query1.finance.yahoo.com/v7/finance/download/%5EVIX'
+endpoint += '?period1={}&period2={}&interval=1d&events=history'
 
 period_start = -1325635200
 period_now = datetime.datetime.utcnow()
