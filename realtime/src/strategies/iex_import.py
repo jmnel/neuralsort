@@ -123,23 +123,31 @@ def get_quandl_ticker_info(db):
 
 #    pprint(response.content)
 
-    re.compile(r':
+    exchange_re = re.compile(r'<p><b>Exchange<\/b>: ([\w ]+)<\/p>')
 
-    ss=io.BytesIO(response.content)
-    zf=zipfile.ZipFile(ss)
+    ss = io.BytesIO(response.content)
+    zf = zipfile.ZipFile(ss)
     with zf.open('EOD_metadata.csv', 'r') as f:
-        f2=io.TextIOWrapper(f, encoding='utf-8')
-        reader=csv.reader(f2, delimiter=',')
-        h=next(reader)
+        f2 = io.TextIOWrapper(f, encoding='utf-8')
+        reader = csv.reader(f2, delimiter=',')
+        h = next(reader)
         pprint(h)
-        rows=tuple(reader)
-        pprint(rows[:5])
-        rows=tuple((r[0],
-                      r[0],
-                      r[1][:-38 - len(r[0])]) for r in rows)
-        pprint(rows[:5])
-#        pprint(rows[0][1])
-        exit()
+
+        rows = list()
+        for idx, row in enumerate(list(reader)):
+
+            symbol = row[0]
+            name = row[1][:-38 - len(row[0])]
+            qdl_code = row[0]
+
+            # Extract exchange from description column.
+            m = exchange_re.search(row[2])
+            if m:
+                exchange = m.groups()[0]
+            else:
+                print(f'no match: "{row[2]}"')
+                print(f'sym: {row[0]}')
+                continue
 
         #    response.ok()
 
@@ -172,7 +180,7 @@ def get_quandl_ticker_info(db):
 
 
 def main():
-    db=prepare_database()
+    db = prepare_database()
 #    parse_csv(db)
     get_quandl_ticker_info(db)
     db.close()
