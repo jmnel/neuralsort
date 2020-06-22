@@ -13,9 +13,7 @@ from pathlib import Path
 from pprint import pprint
 import numpy as np
 import quandl
-#import matplotlib
-# matplotlib.use('Qt5Cairo')
-#import matplotlib.pyplot as plt
+import logging
 
 from ticker_filter import TickerFilter
 import settings
@@ -24,11 +22,6 @@ import settings
 def prepare_database(db: sqlite3.Connection):
 
     db.execute('PRAGMA foreign_keys = ON;')
-
-    db.execute('''
-DROP INDEX IF EXISTS qdl_eod_symbols_index;
-''')
-
     db.execute('''
 DROP TABLE IF EXISTS qdl_eod;
 ''')
@@ -40,22 +33,23 @@ DROP TABLE IF EXISTS qdl_symbols;
     # Create meta table.
     db.execute('''
 CREATE TABLE IF NOT EXISTS qdl_symbols(
-    id INTEGER PRIMARY KEY,
-    symbol CHAR(32) NOT NULL UNIQUE,
+    symbol CHAR(32) PRIMARY KEY,
     qdl_code CHAR(32) NOT NULL,
     name CHAR(256) NOT NULL,
     exchange CHAR(16) NOT NULL,
-    last_trade DATE NOT NULL,
+    last_trade DATE,
     start_date DATE,
     end_date DATE,
-    lifetime_returns FLOAT);
+    lifetime_returns FLOAT,
+    is_common BOOLEAN
+    );
 ''')
 
     # Create data table.
     db.execute('''
 CREATE TABLE IF NOT EXISTS qdl_eod(
     id INTEGER PRIMARY KEY,
-    symbol_id MEDIUMINT UNSIGNED NOT NULL,
+    symbol CHAR(32) NOT NULL,
     date DATE NOT NULL,
     open FLOAT NOT NULL,
     high FLOAT NOT NULL,
@@ -69,36 +63,67 @@ CREATE TABLE IF NOT EXISTS qdl_eod(
     adj_low FLOAT NOT NULL,
     adj_close FLOAT NOT NULL,
     adj_volume FLOAT NOT NULL,
-    FOREIGN KEY(symbol_id) REFERENCES qdl_symbols(id)
+    FOREIGN KEY(symbol) REFERENCES qdl_symbols(symbol)
 );''')
 
-    # Create symbol view.
-    db.execute('''
-CREATE INDEX IF NOT EXISTS qdl_eod_symbols_index ON qdl_eod(symbol_id);
-''')
+
+logger = logging.getLogger(__name__)
 
 
 def get_quandl_tickers(db: sqlite3.Connection):
 
-    # This the url of the API endpoint for the master list of tickers.
-    TICKER_URL = 'https://s3.amazonaws.com/quandl-production-static/end_of_day_us_stocks/ticker_list.csv'
+    logger.info('Downloading Quandl EOD metadata.')
 
-    # Get the csv file using HTTP request.
-    tickers_reponse = requests.get(TICKER_URL)
+    META_ENDPOINT = 'https://www.quandl.com/api/v3/databases/EOD/metadata?api_key={}'
+    response = requests.get(META_ENDPOINT.format(settings.QUANDL_API_KEY))
+    if not response.ok:
+        logger.critical(f'Quandl metadata endpoint request error {response.status_code}.')
+        exit()
 
-    reader = csv.reader(io.StringIO(tickers_reponse.text), delimiter=',')
-    next(reader)
-    ticker_list = list(reader)
+    exchange_re = re.compile(r'<p><b>Exchange<\/b>: ([\w ]+)<\/p>')
+
+    ss = io.BytesIO(response.content)
+    zf = zipfile.ZipFile(ss)
+
+    logger.info('Processing metadata.')
+    count = 0
+    with zf.open('EOD_metadata.csv', 'r') as f:
+        f2 = io.TextIOWrapper(f, encoding='utf-8')
+        reader = csv.reader(f2, delimiter=',')
+        next(reader)
+
+        symbol_list = list()
+        for idx, row in enumerate(list(reader)):
+
+            count += 1
+
+            symbol = row[0]
+            name = row[1][:-38 - len(row[0])]
+            qdl_code = 'EOD/' + row[0]
+
+            # Extract exchange from description column.
+            m = exchange_re.search(row[2])
+            if m:
+                exchange = m.groups()[0]
+
+            # Symbol AA_P has no description, exchange, or data.
+            else:
+                continue
+
+            symbol_list.append((symbol, qdl_code, name, exchange, True))
+
+    logger.info(f'Found {count} symbols, filtered to {len(symbol_list)}')
+    logger.info('Done')
 
     # Filter out non-common stocks.
-    ticker_list = list(
-        filter(lambda row: TickerFilter.filter(row[0], row[2], row[3]), ticker_list))
+    symbol_list = list(
+        filter(lambda row: TickerFilter.filter(row[0], row[2], row[3]), symbol_list))
 
     # Insert list of symbols into meta table.
     db.executemany('''
-INSERT INTO qdl_symbols(symbol, qdl_code, name, exchange, last_trade)
+INSERT INTO qdl_symbols(symbol, qdl_code, name, exchange, is_common)
 VALUES(?, ?, ?, ?, ?);
-''', ticker_list)
+''', symbol_list)
 
     db.commit()
 
@@ -139,10 +164,11 @@ def bulk_download(db: sqlite3.Connection):
 
     # Get list of symbols to keep.
     tickers = db.execute('''
-SELECT symbol, id, qdl_code FROM qdl_symbols;
+SELECT symbol, qdl_code FROM qdl_symbols;
 ''').fetchall()
 
-    tickers = {row[2].split('/')[1]: (row[1], row[0]) for row in tickers}
+#    tickers = {row[1].split('/')[1]: (row[1], row[0]) for row in tickers}
+    tickers = {row[1].split('/')[1]: row[0] for row in tickers}
 
     # Process the bulk downloaded CSV file; we have to perform buffered write into database,
     # to limit memory consumption.
@@ -173,15 +199,16 @@ SELECT symbol, id, qdl_code FROM qdl_symbols;
 
                 # This check is expensive, so we only perform it when the 'Symbol' value changes
                 # from row to row in the CSV file.
+#                print(qdl_code)
                 should_keep = qdl_code in tickers
 
                 if should_keep:
                     # Get foreign key for current symbol in meta table.
-                    sid = tickers[qdl_code][0]
+                    symbol = tickers[qdl_code][0]
 
             if should_keep:
                 # Append row record to write buffer.
-                data_row = (sid, date, o, h, l, c, v, div, sp,
+                data_row = (symbol, date, o, h, l, c, v, div, sp,
                             o_adj, h_adj, l_adj, c_adj, v_adj)
                 write_buffer.append(data_row)
 
@@ -190,7 +217,7 @@ SELECT symbol, id, qdl_code FROM qdl_symbols;
                 print(f'\t\tWrite buffer reached max size. Writing to database...')
                 db.executemany('''
  INSERT INTO qdl_eod(
-    symbol_id,
+    symbol,
     date,
     open,
     high,
@@ -213,7 +240,7 @@ SELECT symbol, id, qdl_code FROM qdl_symbols;
             print(f'\t\tWriting remaining records to database...')
             db.executemany('''
 INSERT INTO qdl_eod(
-    symbol_id,
+    symbol,
     date,
     open,
     high,
@@ -237,19 +264,19 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 def generate_meta_data(db: sqlite3.Connection):
 
-    print('Generating metadata...')
+    log.info('Generating metadata.')
 
-    sid_symbol = db.execute('''
-SELECT id, symbol FROM qdl_symbols;''').fetchall()
+    symbols = db.execute('''
+SELECT symbol FROM qdl_symbols;''').fetchall()
 
-    for idx, (sid, symbol) in enumerate(sid_symbol):
+    for idx, symbol in enumerate(symbols):
 
         if idx % 200 == 0:
-            print(f'Getting meta data for {idx} of {len(sid_symbol)}...')
+            print(f'Getting meta data for {idx} of {len(symbols)}...')
 
         rows = db.execute('''
-SELECT date, adj_open, adj_close FROM qdl_eod WHERE symbol_id=? ORDER BY date;''',
-                          (sid,)).fetchall()
+SELECT date, adj_open, adj_close FROM qdl_eod WHERE symbol=? ORDER BY date;''',
+                          (symbol,)).fetchall()
 
         if len(rows) < 2:
             print(f'{symbol} missing data')
@@ -269,7 +296,7 @@ SELECT date, adj_open, adj_close FROM qdl_eod WHERE symbol_id=? ORDER BY date;''
             db.execute('''
     UPDATE qdl_symbols
     SET start_date=?, end_date=?, lifetime_returns=?
-    WHERE id=?;''', (first_date, last_date, returns, sid))
+    WHERE symbol=?;''', (first_date, last_date, returns, symbol))
 
             db.commit()
 
@@ -279,19 +306,19 @@ SELECT date, adj_open, adj_close FROM qdl_eod WHERE symbol_id=? ORDER BY date;''
 def purge_empty(db: sqlite3.Connection):
 
     meta = db.execute('''
-SELECT id, symbol, start_date, end_date FROM qdl_symbols;''')
+SELECT symbol, start_date, end_date FROM qdl_symbols;''')
 
-    for sid, symbol, start_date, end_date in meta:
+    for symbol, start_date, end_date in meta:
         if start_date is None or end_date is None:
             print(f'Purging {symbol} due to empty data')
 
             db.execute('''
-DELETE FROM qdl_eod WHERE symbol_id=?;
-''', (sid,))
+DELETE FROM qdl_eod WHERE symbol=?;
+''', (symbol,))
 
             db.execute('''
-DELETE FROM qdl_symbols WHERE id=?;
-''', (sid,))
+DELETE FROM qdl_symbols WHERE symbol=?;
+''', (symbol,))
 
     db.commit()
 
@@ -301,6 +328,7 @@ def main():
     with sqlite3.connect(settings.DATA_DIRECTORY / settings.DATABASE_NAME) as db:
         prepare_database(db)
         get_quandl_tickers(db)
+#        exit()
         bulk_download(db)
         generate_meta_data(db)
         purge_empty(db)
