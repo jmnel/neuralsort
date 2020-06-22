@@ -19,11 +19,9 @@ quandl.ApiConfig.api_key = settings.QUANDL_API_KEY
 logger = logging.getLogger(__name__)
 
 
-def prepare_database() -> sqlite3.Connection:
+def prepare_database(db: sqlite3.Connection):
 
     logger.info(f'Preparing database {settings.DATABASE_NAME}...')
-
-    db = sqlite3.connect(settings.DATA_DIRECTORY / settings.DATABASE_NAME)
 
     db.execute('PRAGMA foreign_keys = ON;')
     db.execute('DROP TABLE IF EXISTS iex_trade_reports;')
@@ -64,7 +62,17 @@ CREATE TABLE iex_trade_reports(
 
     logger.info('Done')
 
-    return db
+
+def prep2(db: sqlite3.Connection):
+
+    db.execute('''
+CREATE TABLE IF NOT EXISTS iex_days_symbols(
+    id INTEGER PRIMARY KEY,
+    day DATE NOT NULL,
+    symbol CHAR(16) NOT NULL,
+    FOREIGN KEY(day) REFERENCES iex_days(date),
+    FOREIGN KEY(symbol) REFERENCES iex_symbols(symbol)
+);''')
 
 
 def parse_csv(db: sqlite3.Connection, symbols_meta):
@@ -169,10 +177,11 @@ VALUES(?, ?, ?, ?);
 
 
 def main():
-    db = prepare_database()
-    symbols_meta = get_quandl_meta(db)
-    parse_csv(db, symbols_meta)
-    db.close()
+    with sqlite3.connect(settings.DATA_DIRECTORY / settings.DATABASE_NAME) as db:
+        prep2(db)
+        #        prepare_database(db)
+        #        symbols_meta = get_quandl_meta(db)
+        #        parse_csv(db, symbols_meta)
 
 
 if __name__ == '__main__':
