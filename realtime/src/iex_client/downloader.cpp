@@ -161,8 +161,7 @@ namespace jmnel::iex {
             std::unique_ptr<iex_message_base> message;
             auto result = pcap_decoder.get_next_message( message );
 
-            // Decode all remaining messages in pcap dump.
-            size_t count = 0;
+            Decode all remaining messages in pcap dump.size_t count = 0;
             for( ; result == return_code_t::success; result = pcap_decoder.get_next_message( message ) ) {
                 if( message->type() == message_type::trade_report ) {
                     const auto trade_report = dynamic_cast<trade_report_message*>( message.get() );

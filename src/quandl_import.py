@@ -341,10 +341,9 @@ def main():
     with sqlite3.connect(settings.DATA_DIRECTORY / settings.DATABASE_NAME) as db:
         #        prepare_database(db)
         #        get_quandl_tickers(db)
-        #        exit()
         #        bulk_download(db)
         generate_meta_data(db)
-#        purge_empty(db)
+        purge_empty(db)
 
 
 main()

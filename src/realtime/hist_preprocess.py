@@ -96,13 +96,13 @@ def main():
 
 main()
 
-#    gumb = gumbel_r.fit(log_rets)
+gumb = gumbel_r.fit(log_rets)
 
 
-#        x = np.linspace(-0.01, 0.05, 100)
-#        plt.plot(x, gumbel_r.pdf(x, mu, beta))
+x = np.linspace(-0.01, 0.05, 100)
+plt.plot(x, gumbel_r.pdf(x, mu, beta))
 
-#        plt.show()
+plt.show()
 #    exit()
 
 #    pprint(df[:, 'Adj_High'])

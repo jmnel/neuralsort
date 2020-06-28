@@ -21,9 +21,10 @@ logger = logging.getLogger(__name__)
 
 def prepare_database(db: sqlite3.Connection):
 
-    logger.info(f'Preparing database {settings.DATABASE_NAME}...')
+    logger.info(f'Preparing database {settings.IEX_DATABASE_NAME}...')
 
     db.execute('PRAGMA foreign_keys = ON;')
+    db.execute('DROP INDEX IF EXISTS iex_trade_reports_day_index;')
     db.execute('DROP TABLE IF EXISTS iex_trade_reports;')
     db.execute('DROP TABLE IF EXISTS iex_days;')
     db.execute('DROP TABLE IF EXISTS iex_symbols;')
@@ -50,7 +51,7 @@ CREATE TABLE iex_symbols(
     db.execute('''
 CREATE TABLE iex_trade_reports(
    id INTEGER PRIMARY KEY,
-   day MEDIUMINT UNSIGNED NOT NULL,
+   day DATE NOT NULL,
    timestamp UNSIGNED BIG INT NOT NULL,
    symbol CHAR(16) NOT NULL,
    price INTEGER NOT NULL,
@@ -60,19 +61,12 @@ CREATE TABLE iex_trade_reports(
 );
 ''')
 
-    logger.info('Done')
-
-
-def prep2(db: sqlite3.Connection):
-
+    # Create trade reports day index.
     db.execute('''
-CREATE TABLE IF NOT EXISTS iex_days_symbols(
-    id INTEGER PRIMARY KEY,
-    day DATE NOT NULL,
-    symbol CHAR(16) NOT NULL,
-    FOREIGN KEY(day) REFERENCES iex_days(date),
-    FOREIGN KEY(symbol) REFERENCES iex_symbols(symbol)
-);''')
+CREATE INDEX trade_reports_day_index
+ON iex_trade_reports(day);''')
+
+    logger.info('Done')
 
 
 def parse_csv(db: sqlite3.Connection, symbols_meta):
@@ -83,10 +77,11 @@ def parse_csv(db: sqlite3.Connection, symbols_meta):
 
     logger.info('Parsing csv files for days.')
 
-    csv_directory = settings.DATA_DIRECTORY / 'csv_test'
+    csv_directory = settings.DATA_DIRECTORY / 'csv'
 
     # Get list of days by enumerating csv files in directory.
-    for f in os.listdir(csv_directory):
+    csv_list = sorted(os.listdir(csv_directory), reverse=False)
+    for jdx, f in enumerate(csv_list):
         csv_path = csv_directory / f
         if csv_path.is_file and csv_path.suffix == '.csv':
 
@@ -97,7 +92,7 @@ def parse_csv(db: sqlite3.Connection, symbols_meta):
             db.commit()
             day_id = db.execute('SELECT last_insert_rowid();').fetchone()[0]
 
-            logger.info(f'Found day {day} @ {f}.')
+            logger.info(f'Found day {jdx+1} of {len(csv_list)} : {day} @ {f}.')
 
             with open(csv_path, 'r') as csv_file:
                 reader = csv.reader(csv_file, delimiter=',')
@@ -177,11 +172,10 @@ VALUES(?, ?, ?, ?);
 
 
 def main():
-    with sqlite3.connect(settings.DATA_DIRECTORY / settings.DATABASE_NAME) as db:
-        prep2(db)
-        #        prepare_database(db)
-        #        symbols_meta = get_quandl_meta(db)
-        #        parse_csv(db, symbols_meta)
+    with sqlite3.connect(settings.DATA_DIRECTORY / settings.IEX_DATABASE_NAME) as db:
+        prepare_database(db)
+        symbols_meta = get_quandl_meta(db)
+        parse_csv(db, symbols_meta)
 
 
 if __name__ == '__main__':
