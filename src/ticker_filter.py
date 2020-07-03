@@ -41,12 +41,27 @@ NYSE_POSTFIXES = {'F', 'Q', 'I', 'Z', 'L', 'N', 'O', 'C', 'CL', 'P',
 NYSE_REGEX_TERMS = [
     r'\bdeposit[ao]ry',
     r'\bbeneficial \binterest',
+    r'\brate\b',
+    r'\bincome\b', r'\bshares\b',
+    r'\bperp\. cap\b',
+    r'\bsecurites\b',
+    r'\bperpetual\b',
+    r'\bperp\b',
+    r'\bcap\b',
+    r'\btrust\b',
+    r'\$',
+    r'\bunit\b',
     r'\binterest', r'\bunits', r'\bfund', r'\bdue', r'\bbond',
     r'\betf$', r'\betn\b', r'\badr\b', r'\bdepsitary\b']
 NYSE_REGEX = re.compile('|'.join(NYSE_REGEX_TERMS), flags=re.IGNORECASE)
 
 NASDAQ_REGEX_TERMS = [
     r'\bfund\b', r'\bdeposit[ao]ry\b', r'\bproshares\b', r'\bpowershares\b', r'\biShares\b',
+    r'\bcap\b', r'\bmidcap\b',
+    r'\btrust\b',
+    r'\$',
+    r'\bunit\b',
+    r'\brate\b', r'\bincome\b', r'\bshares\b',
     r'\bvictoryshares\b', r'\bdepsitary\b',
     r'\betf\b', r'\bbond\b', r'\betn\b', r'\badr\b', r'\bet$', r'\bdue\b', r'\%']
 
@@ -76,10 +91,14 @@ class TickerFilter:
         elif exchange == 'NASDAQ':
             return TickerFilter.filter_nasqad(ticker, name)
 
-    def filter_nyse(ticker, name):
+    def filter_nyse(ticker: str, name: str):
 
         # Filter out NYSE test tickers.
         if ticker in NYSE_TEST_TICKERS:
+            return False
+
+        # Filter out trailing underscore.
+        if ticker[-1] == '_':
             return False
 
         # Check for dot convention.
@@ -95,11 +114,24 @@ class TickerFilter:
             if tokens[1] in NYSE_POSTFIXES:
                 return False
 
+        # Check for underscore convention.
+        tokens = ticker.split('_')
+        if len(tokens) > 1:
+            root = tokens[0]
+
+            # Check for NYSE test tickers.
+            if root in NYSE_TEST_TICKERS:
+                return False
+
+            # Filter out non-common stock postfixes after 1st dot.
+            if tokens[1] in NYSE_POSTFIXES:
+                return False
+
             # Postfix A or B following dot, denotes class A or class B common stock.
 #            elif tokens[1] in {'A', 'B'}:
 #                pass
 
-                #                return True
+            #                return True
 
         # Check for 5th letter ticker.
         if len(ticker) == 5:
@@ -125,6 +157,10 @@ class TickerFilter:
 
         # Filter out NASDAQ test tickers.
         if ticker in NASDAQ_TEST_TICKERS:
+            return False
+
+        # Filter out trailing underscore.
+        if ticker[-1] == '_':
             return False
 
         # Check if ticker has NASDAQ 5th letter.

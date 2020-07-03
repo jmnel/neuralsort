@@ -157,7 +157,7 @@ db = sqlite3.connect(settings.DATA_DIRECTORY / settings.IEX_DATABASE_NAME)
 
 days = db.execute('SELECT date FROM iex_days WHERE date >= "2019-01-01" AND date <= "2019-12-31";').fetchall()
 days = tuple(zip(*days))[0]
-day = days[40]
+day = days[50]
 
 data = db.execute('SELECT timestamp, price, size FROM iex_trade_reports WHERE day=? AND symbol =?;',
                   (day, 'GOOGL')).fetchall()

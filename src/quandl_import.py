@@ -1,76 +1,30 @@
 import io
 import os
-from time import perf_counter
-import requests
-import csv
+import logging
+from tempfile import mkdtemp
 import sqlite3
+import csv
 import re
 from datetime import datetime
 import shutil
 import zipfile
-from tempfile import mkdtemp
 from pathlib import Path
-from pprint import pprint
-import numpy as np
+import requests
+
 import quandl
-import logging
 
 from ticker_filter import TickerFilter
 import settings
-
-
-def prepare_database(db: sqlite3.Connection):
-
-    db.execute('PRAGMA foreign_keys = ON;')
-    db.execute('''
-DROP TABLE IF EXISTS qdl_eod;
-''')
-
-    db.execute('''
-DROP TABLE IF EXISTS qdl_symbols;
-''')
-
-    # Create meta table.
-    db.execute('''
-CREATE TABLE IF NOT EXISTS qdl_symbols(
-    symbol CHAR(32) PRIMARY KEY,
-    qdl_code CHAR(32) NOT NULL,
-    name CHAR(256) NOT NULL,
-    exchange CHAR(16) NOT NULL,
-    last_trade DATE,
-    start_date DATE,
-    end_date DATE,
-    lifetime_returns FLOAT,
-    is_common BOOLEAN
-    );
-''')
-
-    # Create data table.
-    db.execute('''
-CREATE TABLE IF NOT EXISTS qdl_eod(
-    id INTEGER PRIMARY KEY,
-    symbol CHAR(32) NOT NULL,
-    date DATE NOT NULL,
-    open FLOAT NOT NULL,
-    high FLOAT NOT NULL,
-    low FLOAT NOT NULL,
-    close FLOAT NOT NULL,
-    volume FLOAT NOT NULL,
-    dividend FLOAT NOT NULL,
-    split FLOAT NOT NULL,
-    adj_open FLOAT NOT NULL,
-    adj_high FLOAT NOT NULL,
-    adj_low FLOAT NOT NULL,
-    adj_close FLOAT NOT NULL,
-    adj_volume FLOAT NOT NULL,
-    FOREIGN KEY(symbol) REFERENCES qdl_symbols(symbol)
-);''')
 
 
 logger = logging.getLogger(__name__)
 
 
 def get_quandl_tickers(db: sqlite3.Connection):
+
+    if settings.QUANDL_API_KEY == None or settings.QUANDL_API_KEY == '':
+        logger.critical('Quandl API key not set. Refer to settings.py')
+        raise ValueError('Quandl API key not set. Refer to settings.py')
 
     logger.info('Downloading Quandl EOD metadata.')
 
@@ -147,7 +101,7 @@ def bulk_download(db: sqlite3.Connection):
 
         logger.info('Done.')
     else:
-        logger.warning('Already downloaded.')
+        logger.warning(f'File "{eod_path}" already downloaded, delete to rebuild database.')
 
     # Create temporary directory.
     logger.info('Extracting zip file.')
@@ -336,14 +290,14 @@ DELETE FROM qdl_symbols WHERE symbol=?;
     logger.info('Done.')
 
 
-def main():
+# def main():
 
-    with sqlite3.connect(settings.DATA_DIRECTORY / settings.DATABASE_NAME) as db:
-        #        prepare_database(db)
-        #        get_quandl_tickers(db)
-        #        bulk_download(db)
-        generate_meta_data(db)
-        purge_empty(db)
+#    with sqlite3.connect(settings.DATA_DIRECTORY / settings.DATABASE_NAME) as db:
+#        prepare_database(db)
+#        get_quandl_tickers(db)
+#        bulk_download(db)
+#        generate_meta_data(db)
+#        purge_empty(db)
 
 
-main()
+# main()

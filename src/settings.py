@@ -6,7 +6,7 @@ import logging
 ROOT_DIRECTORY = Path(__file__).absolute().parents[1]
 DATA_DIRECTORY = ROOT_DIRECTORY / 'data'
 
-DATABASE_NAME = 'neuralsort.db'
+DATABASE_NAME = 'qdl.sqlite3'
 EODDATA_DATABASE_NAME = 'eoddata.db'
 
 IB_DATABASE_NAME = 'ib_bbo.db'
