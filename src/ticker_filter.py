@@ -2,8 +2,8 @@ import re
 
 import settings
 
-NYSE_TEST_TICKERS = {'ATEST', 'CTEST', 'MTEST', 'NTEST', 'ZTST'}
-NASDAQ_TEST_TICKERS = {'ZAZZT', 'ZBZZT', 'ZJZZT', 'ZVZZT'}
+NYSE_TEST_TICKERS = {'ATEST', 'CTEST', 'MTEST', 'NTEST', 'ZTST', 'CBX'}
+NASDAQ_TEST_TICKERS = {'ZAZZT', 'ZBZZT', 'ZJZZT', 'ZVZZT', 'ZXYZ_A', 'ZVZZCNX'}
 
 # On NASDAQ a ticker might have a 5 letter name. The 5th letter conveys special meaning.
 # A - class A shares
@@ -51,6 +51,7 @@ NYSE_REGEX_TERMS = [
     r'\btrust\b',
     r'\$',
     r'\bunit\b',
+    r'\bdepositor\b',
     r'\binterest', r'\bunits', r'\bfund', r'\bdue', r'\bbond',
     r'\betf$', r'\betn\b', r'\badr\b', r'\bdepsitary\b']
 NYSE_REGEX = re.compile('|'.join(NYSE_REGEX_TERMS), flags=re.IGNORECASE)
@@ -63,6 +64,7 @@ NASDAQ_REGEX_TERMS = [
     r'\bunit\b',
     r'\brate\b', r'\bincome\b', r'\bshares\b',
     r'\bvictoryshares\b', r'\bdepsitary\b',
+    r'\bnextshares\b',
     r'\betf\b', r'\bbond\b', r'\betn\b', r'\badr\b', r'\bet$', r'\bdue\b', r'\%']
 
 NASDAQ_REGEX = re.compile('|'.join(NASDAQ_REGEX_TERMS), flags=re.IGNORECASE)
