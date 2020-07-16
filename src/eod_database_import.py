@@ -5,6 +5,8 @@ from sp500_import import import_sp500
 
 logger = logging.getLogger(__name__)
 
+QUANDL_DATABASE_PATH = settings.DATA_DIRECTORY / settings.QUANDL_DATABASE_NAME
+
 
 def prepare_database(db: sqlite3.Connection):
 
@@ -73,7 +75,7 @@ CREATE INDEX qdl_eod_symbol_index ON qdl_eod(symbol);
 
 def main():
 
-    with sqlite3.connect(settings.DATA_DIRECTORY / settings.DATABASE_NAME) as db:
+    with sqlite3.connect(QUANDL_DATABASE_PATH) as db:
         prepare_database(db)
         get_quandl_tickers(db)
         bulk_download(db)

@@ -15,6 +15,8 @@ import numpy as np
 CBOE_VIX_2014_URL = "http://www.cboe.com/publish/scheduledtask/mktdata/datahouse/vixcurrent.csv"
 CBOE_VIX_1990_URL = "http://www.cboe.com/publish/scheduledtask/mktdata/datahouse/vixarchive.xls"
 
+QUANDL_DATABASE_PATH = settings.
+
 
 def prepare_database():
     pass

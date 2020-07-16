@@ -8,11 +8,13 @@ import logging
 
 import settings
 
+QUANDL_DATABASE_PATH = settings.DATA_DIRECTORY / settings.QUANDL_DATABASE_NAME
+
 logger = logging.getLogger(__name__)
 
 
 def import_vix():
-    logger.info('Importing VIX.')
+    print('Importing VIX ( $VIX ).')
     endpoint = 'https://query1.finance.yahoo.com/v7/finance/download/%5EVIX'
     endpoint += '?period1={}&period2={}&interval=1d&events=history'
 
@@ -28,7 +30,7 @@ def import_vix():
 
     endpoint = endpoint.format(period_start, period_end)
 
-    db_path = settings.DATA_DIRECTORY / settings.DATABASE_NAME
+    db_path = QUANDL_DATABASE_PATH
 
     response = requests.get(endpoint)
     assert response.status_code == 200
@@ -39,10 +41,13 @@ def import_vix():
     rows = list((r[0], float(r[1]), float(r[2]), float(r[3]), float(r[4]), float(r[5]), int(r[6]))
                 for r in rows)
 
-    logger.info('Saving to database.')
+    print('Saving to database.')
     with sqlite3.connect(db_path) as db:
         db.execute('DELETE FROM qdl_eod WHERE symbol="VIX";')
         db.execute('DELETE FROM qdl_symbols WHERE symbol="VIX";')
+
+        db.execute('DELETE FROM qdl_eod WHERE symbol="$VIX";')
+        db.execute('DELETE FROM qdl_symbols WHERE symbol="$VIX";')
         db.execute('''
     INSERT INTO qdl_symbols(
         symbol,
@@ -51,7 +56,7 @@ def import_vix():
         exchange,
         last_trade)
         VALUES(?, ?, ?, ?, ?);
-    ''', ('VIX',
+    ''', ('$VIX',
           '',
           'CBOE VIX Market Volatility Index',
           'INDEX',
@@ -73,7 +78,7 @@ def import_vix():
             l_adj = l * adj_ratio
             v_adj = v
             rows2.append((
-                'VIX',
+                '$VIX',
                 date,
                 o, h, l, c, v,
                 0.0, 1.0,

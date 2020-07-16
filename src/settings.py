@@ -6,10 +6,9 @@ import logging
 ROOT_DIRECTORY = Path(__file__).absolute().parents[1]
 DATA_DIRECTORY = ROOT_DIRECTORY / 'data'
 
-DATABASE_NAME = 'qdl.sqlite3'
-EODDATA_DATABASE_NAME = 'eoddata.db'
-
-IB_DATABASE_NAME = 'ib_bbo.db'
+QUANDL_DATABASE_NAME = 'qdl.sqlite3'
+QUANDL_DATABASE_VERSION = '0.1'
+QUANDL_IMPORT_INFO_FILE = 'qdl_import_info.json'
 
 IMPORT_QUANDL_RAW = True
 
