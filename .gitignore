@@ -3,3 +3,4 @@ data2
 src/__pycache__
 realtime/src/strategies/__pycache__
 src/EOD.zip
+src/data_import/__pycache__
