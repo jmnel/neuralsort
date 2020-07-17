@@ -1,5 +1,5 @@
 import os
-os.sys.path.insert(0,os.getcwd())
+os.sys.path.insert(0, os.getcwd())
 
 from pathlib import Path
 assert Path().cwd().name == 'src'
@@ -116,7 +116,9 @@ def determine_update_type() -> UpdateType:
         zip_ref.extractall(temp_dir)
 
     #csv_path = Path(temp_dir) / os.listdir(temp_dir)[-1]
-    csv_path = Path(temp_dir) / filter(lambda x: x.suffix == '.csv', os.listdir(temp_dir))[0]
+#    csv_path = Path(temp_dir) / filter(lambda x: Path(x).suffix == '.csv', os.listdir(temp_dir))[0]
+    csv_path = temp_dir / next(filter(lambda x: Path(x).suffix == '.csv',
+                                      os.listdir(temp_dir)))
     assert csv_path.suffix == '.csv'
 
     with open(csv_path, newline='') as csv_file:
