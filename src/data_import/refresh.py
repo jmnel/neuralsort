@@ -1,19 +1,24 @@
+import os
+os.sys.path.insert(0,os.getcwd())
+
+from pathlib import Path
+assert Path().cwd().name == 'src'
+
 from datetime import datetime, date, timedelta
 from enum import Enum
+from operator import itemgetter
 from pathlib import Path
 from pprint import pprint
 from typing import Optional, Dict
 import csv
 import io
 import json
-import os
 import re
 import requests
 import shutil
 import sqlite3
 import tempfile
 import zipfile
-from operator import itemgetter
 
 import pandas as pd
 import pandas_market_calendars as mcal
@@ -21,8 +26,8 @@ import quandl
 
 import settings
 from ticker_filter import TickerFilter
-from vix_import import import_vix
-from sp500_import import import_sp500
+from data_import.vix_import import import_vix
+from data_import.sp500_import import import_sp500
 
 QUANDL_DATABASE_PATH = settings.DATA_DIRECTORY / settings.QUANDL_DATABASE_NAME
 INFO_PATH = settings.DATA_DIRECTORY / settings.QUANDL_IMPORT_INFO_FILE
@@ -110,7 +115,8 @@ def determine_update_type() -> UpdateType:
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(temp_dir)
 
-    csv_path = Path(temp_dir) / os.listdir(temp_dir)[0]
+    #csv_path = Path(temp_dir) / os.listdir(temp_dir)[-1]
+    csv_path = Path(temp_dir) / filter(lambda x: x.suffix == '.csv', os.listdir(temp_dir))[0]
     assert csv_path.suffix == '.csv'
 
     with open(csv_path, newline='') as csv_file:
@@ -374,7 +380,7 @@ def rebuild_database(data):
     temp_dir = Path(tempfile.mkdtemp(prefix="quandl"))
 
     zip_path = temp_dir / 'EOD.zip'
-    shutil.move('EOD.zip', zip_path)
+    shutil.move(Path().cwd() / 'EOD.zip', zip_path)
 
     print('Download done.')
 

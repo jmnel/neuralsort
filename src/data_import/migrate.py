@@ -1,7 +1,13 @@
-import sqlite3
-import json
+import os
+os.sys.path.insert(0,os.getcwd())
+
 from pathlib import Path
+assert Path().cwd().name == 'src'
+
 from datetime import datetime, date
+from pathlib import Path
+import json
+import sqlite3
 
 import settings
 

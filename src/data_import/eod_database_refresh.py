@@ -1,19 +1,22 @@
-import settings
-import logging
+import os
+print(os.getcwd())
+os.sys.path.insert(0,os.getcwd())
+
 import sqlite3
 from pathlib import Path
 import json
 from typing import Optional, Dict
 from pprint import pprint
 from datetime import datetime, date, timedelta
-import pandas as pd
-import pandas_market_calendars as mcal
 import quandl
 import shutil
 import zipfile
 import tempfile
 
-logger = logging.getLogger(__name__)
+import pandas as pd
+import pandas_market_calendars as mcal
+
+import settings
 
 QUANDL_DATABASE_PATH = settings.DATA_DIRECTORY / settings.QUANDL_DATABASE_NAME
 INFO_PATH = settings.DATA_DIRECTORY / 'eod_import.json'
