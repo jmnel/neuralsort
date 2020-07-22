@@ -10,9 +10,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 import matplotlib.dates as mdates
-import mplfinance as mpf
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import FormatStrFormatter
+import mplfinance as mpf
 import pandas as pd
 import progressbar
 
