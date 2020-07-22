@@ -4,3 +4,5 @@ src/__pycache__
 realtime/src/strategies/__pycache__
 src/EOD.zip
 src/data_import/__pycache__
+src/visualize/plots
+src/visualize/plots.zip
