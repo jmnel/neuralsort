@@ -73,9 +73,9 @@ SELECT DISTINCT symbol FROM predicted WHERE date=?;
         symbols = true_symbols.union(predicted_symbols)
 
         day_dir = OUTPUT_DIR / day
-        if day_dir.exists():
-            shutil.rmtree(day_dir)
-        day_dir.mkdir()
+#        if day_dir.exists():
+#            shutil.rmtree(day_dir)
+#        day_dir.mkdir()
 
         for symbol in symbols:
             tasks.append((day, symbol, symbol in true_symbols, symbol in predicted_symbols))
@@ -114,17 +114,13 @@ FROM qdl_eod
 WHERE symbol=? AND date >= ? AND date <= ?
 ORDER BY date;''', (symbol, trading_days[0], day)).fetchall()))
 
-    d = tuple(datetime.strptime(di, '%Y-%m-%d').date() for di in d)
-    ho = tuple(h[idx] / o[idx] for idx in range(len(o)))
+    d = tuple(datetime.strptime(di, '%Y-%m-%d') for di in d)
     data = {'Open': o,
             'High': h,
             'Low': l,
             'Close': c,
-            'Volume': v,
-            'High over open': ho}
+            'Volume': v}
     df = pd.DataFrame(data, index=d)
-
-    c_norm = tuple(c[idx] / c[0] for idx in range(len(c)))
 
     title = f'{symbol}'
     if is_true and is_predicted:
@@ -137,41 +133,19 @@ ORDER BY date;''', (symbol, trading_days[0], day)).fetchall()))
         title += f' - predicted'
         prefix = 'p-'
 
-    plt.ioff()
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
-
-    ax1.plot(d, ho, linewidth=0.5)
-    ax1.set_title('High / Open', fontsize=8)
-    ax1.grid(True)
-
-    ax2.plot(d, o, linewidth=0.5)
-    ax2.plot(d, h, linewidth=0.5)
-    ax2.plot(d, l, linewidth=0.5)
-    ax2.plot(d, c, linewidth=0.5)
-    ax2.set_ylabel('Price')
-    ax2.legend(('Open', 'High', 'Low', 'Close'), fontsize='x-small')
-    ax2.set_title('OHLC', fontsize=8)
-    ax2.grid(True)
-
-    plt3 = ax3.bar(d, v)
-    ax3.set_xlabel('Date')
-    ax3.set_ylabel('Shares')
-    ax3.set_title('Volume', fontsize=8)
-    ax3.xaxis.set_major_formatter(DateFormatter('%b-%-d'))
-    ax3.set_yticklabels(['{:.0e}K'.format(y) for y in ax3.get_yticks() * 1e-3])
-    ax3.grid(True)
-
-    fig.suptitle(title, fontsize=16)
-
-    fig.tight_layout()
-    fig.subplots_adjust(top=0.9, left=0.15)
+#    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
 
     day_dir = OUTPUT_DIR / day
-
-    fig.savefig(fname=day_dir / f'{prefix}ho_{symbol}_{day}.png',
-                dpi=300,
-                pad_inches=0.25,
-                figsize=(800, 400))
+    plt.ioff()
+    mpf.plot(df, type='candle', mav=[4, 12, 26], volume=True, style='yahoo',
+             tight_layout=True,
+             title=title,
+             savefig={'fname': day_dir / f'{prefix}ohlcv_{symbol}_{day}.png',
+                      'dpi': 200,
+                      'pad_inches': 0.25,
+                      'figsize': (600, 400)}
+             )
+    day_dir = OUTPUT_DIR / day
 
     plt.close()
 
