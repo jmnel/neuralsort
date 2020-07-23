@@ -10,6 +10,8 @@ QUANDL_DATABASE_NAME = 'qdl.sqlite3'
 QUANDL_DATABASE_VERSION = '0.1'
 QUANDL_IMPORT_INFO_FILE = 'qdl_import_info.json'
 
+IEX_DATABASE_NAME = 'iex_tops.sqlite3'
+
 IMPORT_QUANDL_RAW = True
 
 

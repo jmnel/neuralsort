@@ -140,7 +140,7 @@ ORDER BY date;''', (symbol, trading_days[0], day)).fetchall()))
     mpf.plot(df, type='candle', mav=[4, 12, 26], volume=True, style='yahoo',
              tight_layout=True,
              title=title,
-             savefig={'fname': day_dir / f'{prefix}ohlcv_{symbol}_{day}.png',
+             savefig={'fname': day_dir / f'{prefix}{symbol}_ohlcv_{day}.png',
                       'dpi': 200,
                       'pad_inches': 0.25,
                       'figsize': (600, 400)}

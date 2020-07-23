@@ -27,7 +27,7 @@ import settings
 
 PREDICT_WINDOW = 10
 PLOT_LEN = 100
-OUTPUT_DIR = Path(__file__).absolute().parent / 'plots2'
+OUTPUT_DIR = Path(__file__).absolute().parent / 'plots'
 NUM_WORKERS = 8
 
 
@@ -168,7 +168,7 @@ ORDER BY date;''', (symbol, trading_days[0], day)).fetchall()))
 
     day_dir = OUTPUT_DIR / day
 
-    fig.savefig(fname=day_dir / f'{prefix}ho_{symbol}_{day}.png',
+    fig.savefig(fname=day_dir / f'{prefix}{symbol}_ho_{day}.png',
                 dpi=300,
                 pad_inches=0.25,
                 figsize=(800, 400))
