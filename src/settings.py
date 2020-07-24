@@ -14,6 +14,8 @@ IEX_DATABASE_NAME = 'iex_tops.sqlite3'
 
 IMPORT_QUANDL_RAW = True
 
+IB_DATABASE_NAME = 'ib.sqlite3'
+
 
 QUANDL_API_KEY = os.getenv('QUANDL_API_KEY')
 ALPHA_VANTAGE_API_KEY = '63D5Z3C3GBRHSENV'
@@ -36,4 +38,4 @@ def setup_logger():
     logger.addHandler(ch)
 
 
-setup_logger()
+# setup_logger()

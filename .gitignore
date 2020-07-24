@@ -1,8 +1,9 @@
 data
 data2
-src/__pycache__
+realtime/src/ibclient/__pycache__
 realtime/src/strategies/__pycache__
 src/EOD.zip
+src/__pycache__
 src/data_import/__pycache__
 src/visualize/plots
 src/visualize/plots.zip
