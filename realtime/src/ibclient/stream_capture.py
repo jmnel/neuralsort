@@ -237,7 +237,7 @@ VALUES(?, ?, ?, ?, ?);''', row)
             print(f'Unsubscribed to stream: {request_item[1].symbol}.')
 
 
-capturer = Capturer()
+capturer = StreamListener()
 
 
 def signal_handler(sig, frame):
