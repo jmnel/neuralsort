@@ -94,10 +94,10 @@ rows = db.execute('SELECT symbol FROM ib_watch WHERE date=?',
 rows = list([date, r[0], '', ''] for r in rows)
 
 for idx in range(len(rows)):
-    print(f'Querying {symbol}')
 
     # Make symbol match request to client.
     symbol = rows[idx][1]
+    print(f'Querying {symbol}')
     app.reqMatchingSymbols(idx, symbol)
 
     # Rate limit is 1 query per second.

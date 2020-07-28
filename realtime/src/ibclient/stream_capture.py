@@ -35,13 +35,9 @@ class IBapi(EWrapper, EClient):
         # Filter for DELAYED_LAST_PRICE (68) ticks.
         if tickType == 68:
 
-            # Get high precision nanosecond timestamp.
-            t = time_ns()
-
             # Place tick in message queue.
-            self.messages.put((t,
-                               reqId,
-                               False,
+            self.messages.put((reqId,
+                               0,
                                price))
 
     def tickSize(self, reqId, tickType, size):
@@ -53,14 +49,14 @@ class IBapi(EWrapper, EClient):
         # Filter for DELAYED_LAST_SIZE (71) ticks.
         if tickType == 71:
 
-            # Get high precision nanosecond timestamp.
-            t = time_ns()
-
             # Place tick in message queue.
-            self.messages.put((t,
-                               reqId,
-                               True,
+            self.messages.put((reqId,
+                               1,
                                size))
+
+    def tickString(self, reqId, tickType, value):
+        if tickType == 88:
+            self.messages.put((reqId, 2, int(value)))
 
 
 class StreamListener:
@@ -123,29 +119,35 @@ class StreamListener:
                 # Pop tick from queue.
                 tick = self.msg_queue.get()
 
-                t = tick[0]
-                request_id = tick[1]
+                request_id = tick[0]
                 symbol = self.watch_list[request_id][1].symbol
 
                 # Trade reports are generated when a size tick is received. We use a particular request ticker's
                 # last price.
 
                 # Tick is price type.
-                if not tick[2]:
-                    price = tick[3]
+                if tick[1] == 0:
+                    price = tick[2]
 
                     # Update price ticker.
                     self.last_price[request_id] = price
 
+                if tick[1] == 2:
+                    ts = tick[2]
+                    self.last_time[request_id] = ts
+
                 # Tick is size type.
-                else:
-                    size = tick[3]
+                elif tick[1] == 1:
+                    size = tick[2]
 
                     # A last price tick should always proceed a size tick.
                     assert self.last_price[request_id] is not None
+                    assert self.last_time[request_id] is not None
+
                     print(f'{symbol}: ${price}, {size} shares')
 
                     # Store trade report in database.
+                    t = self.last_time[request_id]
                     row = (self.today, t, symbol, int(100. * self.last_price[request_id]), size)
                     self.db.execute('''
 INSERT INTO ib_trade_reports(day, timestamp, symbol, price, size)
@@ -194,6 +196,7 @@ VALUES(?, ?, ?, ?, ?);''', row)
 
         # Initialize last price ticker list with None.
         self.last_price = list(None for _ in range(len(rows)))
+        self.last_time = list(0 for _ in range(len(rows)))
 
         # Loop through each symbol in watchlist.
         for request_id, r in enumerate(rows):
