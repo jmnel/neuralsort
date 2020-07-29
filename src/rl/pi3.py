@@ -12,6 +12,16 @@ import numpy as np
 
 from ticks_dataset import TicksDataset
 
+MAX_EPISODES = 250
+GAMMA = 0.99
+N_TRIALS = 25
+REWARD_THRESHOLD = 400
+LONG_PENALTY = 0.01
+HIDDEN_SIZE = 10
+N_STEP = 100
+DEVICE = 'cuda'
+NUM_LAYERS = 3
+
 
 class Environment:
 
@@ -51,16 +61,11 @@ class Environment:
 
         # Action is long = 1
         elif action == 1:
-            reward = self.x[0, self.idx, 1] - self.x[0, self.idx - 1, 1]
+            reward = self.x[0, self.idx, 1] - self.x[0, self.idx - 1, 1] - LONG_PENALTY
 
         done = self.idx + 1 >= self.x.shape[1]
 
         return state, reward, done
-
-
-HIDDEN_SIZE = 10
-N_STEP = 100
-DEVICE = 'cuda'
 
 
 class Policy(nn.Module):
@@ -68,12 +73,12 @@ class Policy(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.lstm1 = nn.LSTM(3, HIDDEN_SIZE, batch_first=True)
+        self.lstm1 = nn.LSTM(3, HIDDEN_SIZE, batch_first=True, dropout=0.5, num_layers=NUM_LAYERS)
 
         self.fc1 = nn.Linear(HIDDEN_SIZE, 128)
         self.fc2 = nn.Linear(128, 2)
-        self.hidden_cell = (torch.zeros(1, 1, HIDDEN_SIZE).to(DEVICE),
-                            torch.zeros(1, 1, HIDDEN_SIZE).to(DEVICE))
+        self.hidden_cell = (torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE),
+                            torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE))
 
     def forward(self, x):
         lstm_out, self.hidden_cell = self.lstm1(x, self.hidden_cell)
@@ -140,7 +145,7 @@ def train(env, policy, optimizer, gamma):
 
     returns = calculate_returns(rewards, gamma)
 
-    loss = update_policy(returns, log_prob_actions, optimizer)
+    loss = update_policy(returns.to(DEVICE), log_prob_actions.to(DEVICE), optimizer)
 
     return loss, episode_reward
 
@@ -188,15 +193,11 @@ def evaluate(env, policy):
 train_rewards = list()
 test_rewards = list()
 
-MAX_EPISODES = 250
-GAMMA = 0.99
-N_TRIALS = 25
-REWARD_THRESHOLD = 400
 
 for episode in range(1, MAX_EPISODES + 1):
 
-    policy.hidden_cell = (torch.zeros(1, 1, HIDDEN_SIZE),
-                          torch.zeros(1, 1, HIDDEN_SIZE))
+    policy.hidden_cell = (torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE),
+                          torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE))
 
     loss, train_reward = train(train_env, policy, optimizer, GAMMA)
 
