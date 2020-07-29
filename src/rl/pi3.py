@@ -8,6 +8,8 @@ import torch.distributions as distributions
 from torch.utils.data import DataLoader
 
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Qt5Cairo')
 import numpy as np
 
 from ticks_dataset import TicksDataset
@@ -18,9 +20,10 @@ N_TRIALS = 25
 REWARD_THRESHOLD = 400
 LONG_PENALTY = 0.01
 HIDDEN_SIZE = 10
-N_STEP = 100
-DEVICE = 'cuda'
-NUM_LAYERS = 3
+N_STEP = 50
+DEVICE = 'cpu'
+NUM_LAYERS = 1
+PENALTY = 0.01
 
 
 class Environment:
@@ -33,14 +36,20 @@ class Environment:
 
     def reset(self):
         self.idx = 0
+        self.buy_price = 0.0
+        self.is_long = False
+        self.actions = list()
 
-        try:
-            self.day, self.stock, self.x = next(self.train_iter)
-#            self.day, self.stock, self.x = next(iter(self.train_loader))
+        self.buy_pts = list()
+        self.sell_pts = list()
 
-        except StopIteration:
-            self.train_iter = iter(self.train_loader)
-            self.day, self.stock, self.x = next(self.train_iter)
+        self.day, self.stock, self.x = next(iter(self.train_loader))
+#        try:
+#            self.day, self.stock, self.x = next(self.train_iter)
+
+#        except StopIteration:
+#            self.train_iter = iter(self.train_loader)
+#            self.day, self.stock, self.x = next(self.train_iter)
 
 
 #        pprint(self.x[0, :, 0])
@@ -55,15 +64,37 @@ class Environment:
         self.idx += 1
         state = self.x[0, :self.idx + 1, :]
 
+        new_price = self.x[0, self.idx, 1]
+
         # Action is flat = 0.
         if action == 0:
-            reward = 0.0
+            if self.is_long:
+                reward = (new_price - self.buy_price) / self.buy_price - PENALTY
+                self.is_long = False
+                self.sell_pts.append(self.idx)
+            else:
+                reward = 0.0
 
-        # Action is long = 1
+                #            reward = 0.0
+
+                # Action is long = 1
         elif action == 1:
-            reward = self.x[0, self.idx, 1] - self.x[0, self.idx - 1, 1] - LONG_PENALTY
+            if not self.is_long:
+                reward = -1.0 - PENALTY
+                self.is_long = True
+                self.buy_price = new_price
+                self.buy_pts.append(self.idx)
+            else:
+                reward = 0.0
+#            reward = self.x[0, self.idx, 1] - self.x[0, self.idx - 1, 1]
+#            if len(self.actions) == 0:
+#                reward -= LONG_PENALTY
+#            elif self.actions[-1] != 1:
+#                reward -= LONG_PENALTY
 
         done = self.idx + 1 >= self.x.shape[1]
+
+        self.actions.append(action)
 
         return state, reward, done
 
@@ -73,16 +104,46 @@ class Policy(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.lstm1 = nn.LSTM(3, HIDDEN_SIZE, batch_first=True, dropout=0.5, num_layers=NUM_LAYERS)
+#        self.lstm1 = nn.LSTM(3, HIDDEN_SIZE, batch_first=True, dropout=0.5, num_layers=NUM_LAYERS)
+#        self.lstm1 = nn.LSTM(3, HIDDEN_SIZE, batch_first=True, num_layers=NUM_LAYERS)
 
-        self.fc1 = nn.Linear(HIDDEN_SIZE, 128)
+
+#        self.fc1 = nn.Linear(HIDDEN_SIZE, 128)
+        self.fc1 = nn.Linear(960, 128)
         self.fc2 = nn.Linear(128, 2)
-        self.hidden_cell = (torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE),
-                            torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE))
+#        self.hidden_cell = (torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE),
+#                            torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE))
+
+        self.conv1 = nn.Conv1d(3, 8, 1)
+        self.conv2 = nn.Conv1d(8, 16, 2)
+        self.conv3 = nn.Conv1d(16, 32, 2)
+        self.conv4 = nn.Conv1d(32, 32, 1)
+
+        self.pad = nn.ConstantPad1d((0, 100), 0.0)
 
     def forward(self, x):
-        lstm_out, self.hidden_cell = self.lstm1(x, self.hidden_cell)
-        x = F.relu(lstm_out[:, -1, :])
+        #        lstm_out, self.hidden_cell = self.lstm1(x, self.hidden_cell)
+        #        x = F.relu(lstm_out[:, -1, :])
+        x1 = self.pad(x[:, :, 0])[:, -32:]
+        x2 = self.pad(x[:, :, 1])[:, -32:]
+        x3 = self.pad(x[:, :, 2])[:, -32:]
+        x = torch.cat((x1, x2, x3), dim=-2)
+        x = x.reshape((1, 3, 32))
+
+        x = self.conv1(x)
+        x = F.relu(x)
+
+        x = self.conv2(x)
+        x = F.relu(x)
+
+        x = self.conv3(x)
+        x = F.relu(x)
+
+        x = self.conv4(x)
+        x = F.relu(x)
+
+        x = x.flatten()
+
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc2(x)
@@ -118,15 +179,17 @@ def train(env, policy, optimizer, gamma):
         dist = distributions.Categorical(action_prob)
         action = dist.sample()
         log_prob_action = dist.log_prob(action)
-        state, reward, done = env.step(action[0].item())
+        state, reward, done = env.step(action.item())
 
-        actions.append(action[0].item())
+        actions.append(action.item())
 
         log_prob_actions.append(log_prob_action)
         rewards.append(reward)
 
         episode_reward += reward
 
+    print(log_prob_actions)
+#    print(log_prob_actions.shape)
     log_prob_actions = torch.cat(log_prob_actions)
 
     plt.clf()
@@ -137,9 +200,17 @@ def train(env, policy, optimizer, gamma):
 
     for idx, action in enumerate(actions):
         if action == 0:
-            plt.scatter(state[idx:idx + 1, 0], state[idx:idx + 1, 1], color='r', s=4)
+            #            plt.scatter(state[idx:idx + 1, 0], state[idx:idx + 1, 1], color='r', s=4)
+            plt.plot(state[idx:idx + 2, 0], state[idx:idx + 2, 1], color='r', linewidth=0.5)
         elif action == 1:
-            plt.scatter(state[idx:idx + 1, 0], state[idx:idx + 1, 1], color='g', s=4)
+            #            plt.scatter(state[idx:idx + 1, 0], state[idx:idx + 1, 1], color='g', s=4)
+            plt.plot(state[idx:idx + 2, 0], state[idx:idx + 2, 1], color='g', linewidth=0.5)
+
+    for t in env.buy_pts:
+        u = state[t, 0]
+        v0 = min(state[:, 1])
+        v1 = max(state[:, 1])
+        plt.plot([u, u], [v0, v1], color='g')
 
     plt.pause(0.01)
 
@@ -196,8 +267,8 @@ test_rewards = list()
 
 for episode in range(1, MAX_EPISODES + 1):
 
-    policy.hidden_cell = (torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE),
-                          torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE))
+    #    policy.hidden_cell = (torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE),
+    #                          torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE))
 
     loss, train_reward = train(train_env, policy, optimizer, GAMMA)
 
