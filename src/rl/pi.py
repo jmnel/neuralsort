@@ -5,13 +5,27 @@ import torch.optim as optim
 import numpy as np
 
 
+class Environment:
+    def __init__(self):
+        self.observe_n = 3
+        self.action_n = 2
+
+        self.mode = 'train'
+
+    def set_train(self):
+        self.mode = 'train'
+
+    def set_test(self):
+        self.mode = 'test'
+
+
 class PolicyNN(nn.Module):
 
-    def __init__(self):
+    def __init__(self, env):
         super(PolicyNN, self).__init__()
 
-        self.state_space = env.observation_space.shape[0]
-        self.action_space = env.action_space.n
+        self.state_space = env.observe_n
+        self.action_space = env.action_n
 
         self.l1 = nn.Linear(self.state_space, 128, bias=False)
         self.l2 = nn.Linear(128, self.action_space, bias=False)
@@ -44,9 +58,9 @@ def select_action(state):
 
     if policy.policy_history.dim() != 0:
         policy.policy_history = torch.cat([policy.policy_history,
-                                           c.log_prob(actin)])
+                                           c.log_prob(action)])
     else:
-        policy.policy_history = (c.log_prob(actino))
+        policy.policy_history = (c.log_prob(action))
     return action
 
 
