@@ -60,7 +60,7 @@ class Environment:
 
 HIDDEN_SIZE = 10
 N_STEP = 100
-DEVICE = 'gpu'
+DEVICE = 'cuda'
 
 
 class Policy(nn.Module):
