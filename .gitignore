@@ -8,3 +8,4 @@ src/data_import/__pycache__
 src/visualize/plots
 src/visualize/plots.zip
 src/visualize/plots2
+src/rl/__pycache__

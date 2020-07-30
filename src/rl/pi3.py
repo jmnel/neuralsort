@@ -12,16 +12,16 @@ import matplotlib
 matplotlib.use('Qt5Cairo')
 import numpy as np
 
-from ticks_dataset import TicksDataset
+from ticks_dataset import TicksDataset, TicksDatasetIEX
 
-MAX_EPISODES = 250
+MAX_EPISODES = 1000
 GAMMA = 0.99
 N_TRIALS = 25
 REWARD_THRESHOLD = 400
 LONG_PENALTY = 0.01
 HIDDEN_SIZE = 10
-N_STEP = 50
-DEVICE = 'cpu'
+N_STEP = 20
+DEVICE = 'cuda'
 NUM_LAYERS = 1
 PENALTY = 0.01
 
@@ -29,27 +29,30 @@ PENALTY = 0.01
 class Environment:
 
     def __init__(self):
-        self.train_loader = DataLoader(TicksDataset(mode='train'),
+        self.train_loader = DataLoader(TicksDatasetIEX(mode='train'),
                                        batch_size=1,
                                        shuffle=False)
         self.train_iter = iter(self.train_loader)
 
     def reset(self):
+        self.net = 0.0
         self.idx = 0
         self.buy_price = 0.0
         self.is_long = False
         self.actions = list()
+        self.flat_count = 0
+        self.long_count = 0
 
         self.buy_pts = list()
         self.sell_pts = list()
 
-        self.day, self.stock, self.x = next(iter(self.train_loader))
-#        try:
-#            self.day, self.stock, self.x = next(self.train_iter)
+#        self.day, self.stock, self.x = next(iter(self.train_loader))
+        try:
+            self.day, self.stock, self.x = next(self.train_iter)
 
-#        except StopIteration:
-#            self.train_iter = iter(self.train_loader)
-#            self.day, self.stock, self.x = next(self.train_iter)
+        except StopIteration:
+            self.train_iter = iter(self.train_loader)
+            self.day, self.stock, self.x = next(self.train_iter)
 
 
 #        pprint(self.x[0, :, 0])
@@ -65,13 +68,17 @@ class Environment:
         state = self.x[0, :self.idx + 1, :]
 
         new_price = self.x[0, self.idx, 1]
+        prev_price = self.x[0, self.idx - 1, 1]
 
         # Action is flat = 0.
         if action == 0:
+            self.flat_count += 1
             if self.is_long:
-                reward = (new_price - self.buy_price) / self.buy_price - PENALTY
+                #                reward = (new_price - self.buy_price) / self.buy_price - PENALTY
+                reward = -PENALTY
+                self.net += (new_price - self.buy_price)
                 self.is_long = False
-                self.sell_pts.append(self.idx)
+                self.sell_pts.append(self.idx - 1)
             else:
                 reward = 0.0
 
@@ -79,13 +86,16 @@ class Environment:
 
                 # Action is long = 1
         elif action == 1:
+            self.long_count += 1
             if not self.is_long:
-                reward = -1.0 - PENALTY
+                reward = new_price - prev_price - LONG_PENALTY
+#                reward = -1.0 - PENALTY
+                self.net -= new_price
                 self.is_long = True
                 self.buy_price = new_price
-                self.buy_pts.append(self.idx)
+                self.buy_pts.append(self.idx - 1)
             else:
-                reward = 0.0
+                reward = new_price - prev_price
 #            reward = self.x[0, self.idx, 1] - self.x[0, self.idx - 1, 1]
 #            if len(self.actions) == 0:
 #                reward -= LONG_PENALTY
@@ -105,44 +115,44 @@ class Policy(nn.Module):
         super().__init__()
 
 #        self.lstm1 = nn.LSTM(3, HIDDEN_SIZE, batch_first=True, dropout=0.5, num_layers=NUM_LAYERS)
-#        self.lstm1 = nn.LSTM(3, HIDDEN_SIZE, batch_first=True, num_layers=NUM_LAYERS)
+        self.lstm1 = nn.LSTM(3, HIDDEN_SIZE, batch_first=True, num_layers=NUM_LAYERS)
 
-
-#        self.fc1 = nn.Linear(HIDDEN_SIZE, 128)
-        self.fc1 = nn.Linear(960, 128)
+        self.fc1 = nn.Linear(HIDDEN_SIZE, 128)
+#        self.fc1 = nn.Linear(960, 128)
         self.fc2 = nn.Linear(128, 2)
-#        self.hidden_cell = (torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE),
-#                            torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE))
+        self.hidden_cell = (torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE),
+                            torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE))
 
-        self.conv1 = nn.Conv1d(3, 8, 1)
-        self.conv2 = nn.Conv1d(8, 16, 2)
-        self.conv3 = nn.Conv1d(16, 32, 2)
-        self.conv4 = nn.Conv1d(32, 32, 1)
+#        self.conv1 = nn.Conv1d(3, 8, 1)
+#        self.conv2 = nn.Conv1d(8, 16, 2)
+#        self.conv3 = nn.Conv1d(16, 32, 2)
+#        self.conv4 = nn.Conv1d(32, 32, 1)
 
-        self.pad = nn.ConstantPad1d((0, 100), 0.0)
+#        self.pad = nn.ConstantPad1d((0, 100), 0.0)
 
     def forward(self, x):
-        #        lstm_out, self.hidden_cell = self.lstm1(x, self.hidden_cell)
-        #        x = F.relu(lstm_out[:, -1, :])
-        x1 = self.pad(x[:, :, 0])[:, -32:]
-        x2 = self.pad(x[:, :, 1])[:, -32:]
-        x3 = self.pad(x[:, :, 2])[:, -32:]
-        x = torch.cat((x1, x2, x3), dim=-2)
-        x = x.reshape((1, 3, 32))
+        lstm_out, self.hidden_cell = self.lstm1(x, self.hidden_cell)
+        x = F.relu(lstm_out[:, -1, :])
+        #        x1 = self.pad(x[:, :, 0])[:, -32:]
+        #        x2 = self.pad(x[:, :, 1])[:, -32:]
+        #        x3 = self.pad(x[:, :, 2])[:, -32:]
 
-        x = self.conv1(x)
-        x = F.relu(x)
+        #        x = torch.cat((x1, x2, x3), dim=-2)
+        #        x = x.reshape((1, 3, 32))
 
-        x = self.conv2(x)
-        x = F.relu(x)
+        #        x = self.conv1(x)
+        #        x = F.relu(x)
 
-        x = self.conv3(x)
-        x = F.relu(x)
+        #        x = self.conv2(x)
+        #        x = F.relu(x)
 
-        x = self.conv4(x)
-        x = F.relu(x)
+        #        x = self.conv3(x)
+        #        x = F.relu(x)
 
-        x = x.flatten()
+        #        x = self.conv4(x)
+        #        x = F.relu(x)
+
+        #        x = x.flatten()
 
         x = self.fc1(x)
         x = F.relu(x)
@@ -188,7 +198,7 @@ def train(env, policy, optimizer, gamma):
 
         episode_reward += reward
 
-    print(log_prob_actions)
+#    print(log_prob_actions)
 #    print(log_prob_actions.shape)
     log_prob_actions = torch.cat(log_prob_actions)
 
@@ -210,7 +220,13 @@ def train(env, policy, optimizer, gamma):
         u = state[t, 0]
         v0 = min(state[:, 1])
         v1 = max(state[:, 1])
-        plt.plot([u, u], [v0, v1], color='g')
+        plt.plot([u, u], [v0, v1], color='g', linewidth=0.4)
+
+    for t in env.sell_pts:
+        u = state[t, 0]
+        v0 = min(state[:, 1])
+        v1 = max(state[:, 1])
+        plt.plot([u, u], [v0, v1], color='r', linewidth=0.4)
 
     plt.pause(0.01)
 
@@ -267,8 +283,8 @@ test_rewards = list()
 
 for episode in range(1, MAX_EPISODES + 1):
 
-    #    policy.hidden_cell = (torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE),
-    #                          torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE))
+    policy.hidden_cell = (torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE),
+                          torch.zeros(NUM_LAYERS, 1, HIDDEN_SIZE).to(DEVICE))
 
     loss, train_reward = train(train_env, policy, optimizer, GAMMA)
 
@@ -277,3 +293,6 @@ for episode in range(1, MAX_EPISODES + 1):
     avg_train_rewards = np.mean(train_rewards[-N_TRIALS:])
 
     print(f'Episode: {episode}, avg. train reward: {avg_train_rewards}')
+    print(f'Buy: {len(train_env.buy_pts)}, sell: {len(train_env.sell_pts)}')
+    print(f'Flat: {train_env.flat_count}, long: {train_env.long_count}')
+    print(f'Net: {train_env.net}\n')
