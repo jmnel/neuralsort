@@ -21,7 +21,7 @@ class TicksDataset(Dataset):
         db = sqlite3.connect(IB_PATH)
 
         days = tuple(zip(*db.execute('SELECT date FROM ib_days;').fetchall()))[0]
-        days = days[1:2]
+        days = days[-1:]
 
         self.data = list()
 
@@ -32,18 +32,19 @@ SELECT MAX(size) FROM ib_trade_reports;
         for day in days:
 
             rows = db.execute('''
-SELECT count(id), symbol FROM ib_trade_reports WHERE day=? GROUP BY symbol;''', (day,)).fetchall()
+SELECT count(id), symbol FROM ib_trade_reports WHERE day=? AND symbol="KODK" GROUP BY symbol;''', (day,)).fetchall()
 
-            rows = tuple(filter(lambda x: x[0] > 300, rows))
+            rows = tuple(filter(lambda x: x[0] > 1000, rows))
 
-            offset = int(0.8 * len(rows))
-            if mode == 'train':
-                symbols = tuple(r[1] for r in rows[:offset])
-            else:
-                symbols = tuple(r[1] for r in rows[offset:])
+#            offset = int(0.8 * len(rows))
+#            if mode == 'train':
+#                symbols = tuple(r[1] for r in rows[:offset])
+#            else:
+#                symbols = tuple(r[1] for r in rows[offset:])
+            symbols = tuple(r[1] for r in rows)
 
             rows = db.execute('''
-SELECT MIN(timestamp), MAX(timestamp) FROM ib_trade_reports WHERE day=?;
+SELECT MIN(timestamp), MAX(timestamp) FROM ib_trade_reports WHERE day=? AND timestamp!=0;
 ''', (day,)).fetchall()[0]
 
             tmin, tmax = rows
@@ -51,7 +52,7 @@ SELECT MIN(timestamp), MAX(timestamp) FROM ib_trade_reports WHERE day=?;
             for symbol in symbols:
                 rows = db.execute('''
 SELECT timestamp, price, size FROM ib_trade_reports
-WHERE symbol=? AND day=? ORDER BY timestamp''', (symbol, day)).fetchall()
+WHERE symbol=? AND day=? AND timestamp != 0 ORDER BY timestamp''', (symbol, day)).fetchall()
 
                 ts, price, size = zip(*rows)
                 ts = tuple((t - tmin) / (tmax - tmin) for t in ts)
