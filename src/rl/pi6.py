@@ -15,7 +15,7 @@ import numpy as np
 
 from tcn.wavenet_nn import WaveNetNN
 from ticks_dataset import TicksDataset, TicksDatasetIEX
-from environment import Environment
+from environment2 import Environment
 
 MAX_EPISODES = 100000
 GAMMA = 0.99
@@ -42,26 +42,40 @@ class Policy(nn.Module):
                              skip_channels=128,
                              end_channels=128,
                              input_channels=2,
-                             output_channels=2,
+                             output_channels=3,
                              classes=1,
                              output_length=1,
                              kernel_size=2)
 
         self.pad = nn.ConstantPad1d((0, 256), 0.0)
 
-    def forward(self, x):
+        self.fc1 = nn.Linear(3 + 1, 12)
+        self.fc2 = nn.Linear(12, 3)
+
+    def forward(self, state):
+
+        x, hold_f = state
 
         x = x.reshape((1, 2, x.shape[1]))
         x = self.pad(x)
         x = x[:, :, :256]
         y = self.tcn(x)
+
+        hold_f = hold_f.reshape((1, 1))
+#        print(y.shape)
+#        print(hold_f.shape)
+        z = torch.cat((y, hold_f), dim=1)
+        z = self.fc1(z)
+        z = F.relu(z)
+
+        z = self.fc2(z)
 #        y += torch.autograd.Variable(torch.randn(y.size()).to(DEVICE)) * 0.1
-        return y
+        return z
 
 
 policy = Policy().to(DEVICE)
-train_env = Environment(PENALTY)
-optimizer = optim.Adam(policy.parameters(), lr=1e-2)
+train_env = Environment(PENALTY, 1.0e-3)
+optimizer = optim.Adam(policy.parameters(), lr=2e-2)
 
 actions = list()
 
@@ -75,17 +89,18 @@ def train(env, policy, optimizer, gamma):
     done = False
     episode_reward = 0
 
-    state = env.reset()
+    state, hold_f = env.reset()
     global actions
     actions = list()
 
     while not done:
 
         state = state.to(DEVICE)
+        hold_f = torch.FloatTensor((hold_f,)).to(DEVICE)
 
         state = state[:, -200:, :]
 
-        action_pred = policy(state)
+        action_pred = policy((state, hold_f))
 
         action_prob = F.softmax(action_pred, dim=1)
 
@@ -94,7 +109,7 @@ def train(env, policy, optimizer, gamma):
         action = dist.sample()
         log_prob_action = dist.log_prob(action).reshape((1, 1))
 
-        state, reward, done = env.step(action.item())
+        (state, hold_f), reward, done = env.step(action.item())
 
         actions.append(action.item())
 
@@ -183,14 +198,14 @@ for episode in range(1, MAX_EPISODES + 1):
 
     prices = train_env.prices
     ax1.plot(np.arange(len(prices)), prices, color='black', linewidth=0.2)
-    for idx, action in enumerate(train_env.actions):
-        i = idx + 3
-        if action == 0:
-            color = 'red'
-        else:
-            color = 'green'
+#    for idx, action in enumerate(train_env.actions):
+#        i = idx + 3
+#        if action == 0:
+#            color = 'red'
+#        else:
+#            color = 'green'
 
-        ax1.plot(tuple(range(i, i + 2)), prices[i: i + 2], color=color, linewidth=0.4)
+#        ax1.plot(tuple(range(i, i + 2)), prices[i: i + 2], color=color, linewidth=0.4)
 
     if len(train_env.buy_pts) > 0:
         ax1.scatter(*(zip(*train_env.buy_pts)), color='green', s=8)
@@ -204,10 +219,12 @@ for episode in range(1, MAX_EPISODES + 1):
     plt.show()
 
     print(f'Episode: {episode}, avg. train reward: {avg_train_rewards}, loss: {loss}')
-    print(f'Buy: {len(train_env.buy_pts)}, sell: {len(train_env.sell_pts)}')
-    print(f'Flat: {train_env.flat_count}, long: {train_env.long_count}')
+    print(f'Buy: {len(train_env.buy_pts)}, sell: {len(train_env.sell_pts)}, hold: {train_env.hold_count}')
+    print(f'invalid: {train_env.invalid_count}')
+#    print(f'Flat: {train_env.flat_count}, long: {train_env.long_count}')
     print(f'Net: {train_env.net}')
-    p_reward_avg = np.mean(train_env.p_rewards)
-    r_reward_avg = np.mean(train_env.r_rewards)
-    print(f'p reward: {p_reward_avg}, r reward: {r_reward_avg}')
-    print(f'hold len: {train_env.max_hold_len}')
+    print(f'sell_r: {train_env.sell_raw}, buy_r: {train_env.buy_raw}, hold_r: {train_env.hold_raw}')
+#    p_reward_avg = np.mean(train_env.p_rewards)
+#    r_reward_avg = np.mean(train_env.r_rewards)
+#    print(f'p reward: {p_reward_avg}, r reward: {r_reward_avg}')
+#    print(f'hold len: {train_env.max_hold_len}')
