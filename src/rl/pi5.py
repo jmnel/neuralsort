@@ -15,6 +15,7 @@ import numpy as np
 
 from tcn.wavenet_nn import WaveNetNN
 from ticks_dataset import TicksDataset, TicksDatasetIEX
+from environment import Environment
 
 MAX_EPISODES = 100000
 GAMMA = 0.99
@@ -22,101 +23,11 @@ N_TRIALS = 1
 REWARD_THRESHOLD = 400
 HIDDEN_SIZE = 50
 N_STEP = 10
-DEVICE = 'cuda'
+DEVICE = 'cpu'
 NUM_LAYERS = 1
 PENALTY = 0.0005
 
 run_hist = list()
-
-
-class Environment:
-
-    def __init__(self):
-        self.train_loader = DataLoader(TicksDataset(mode='train'),
-                                       batch_size=1,
-                                       shuffle=False)
-        self.train_iter = iter(self.train_loader)
-
-    def reset(self):
-        self.idx = 0
-        self.buy_price = 0.0
-        self.is_long = False
-        self.actions = list()
-        self.flat_count = 0
-        self.long_count = 0
-
-        self.cash = 1.0
-        self.hold = 0.0
-
-        self.cash_hist = [self.cash, ]
-        self.hold_hist = [self.hold, ]
-
-        self.buy_pts = list()
-        self.sell_pts = list()
-
-        self.net = 0
-
-        q = iter(self.train_loader)
-        self.day, self.stock, self.x = next(q)
-
-        self.prices = self.x
-
-        p = self.x[0, :, 1].numpy()
-        p = p / p[0]
-
-        p = p[:200]
-        self.prices = p
-        p = np.diff(np.log(p)) * 1.0e2
-        self.x = torch.FloatTensor(p)
-        self.x = self.x.reshape((1, self.x.shape[0], 1))
-
-        state = self.x[:, :self.idx + 1, :]
-
-        return state
-
-    def step(self, action):
-        self.idx += 1
-        state = self.x[:, :self.idx + 1, :]
-
-        r = self.x[0, self.idx, 0]
-
-        done = False
-
-        max_sale = (-float('inf'), 0, 0)
-        # Action is flat = 0.
-        if action == 0:
-            self.flat_count += 1
-#            reward = -r
-            if self.hold > 0.0:
-                self.hold = 0.0
-                reward = self.prices[self.idx] - self.buy_price - PENALTY
-#                print(f'sell @{self.idx+1} R={reward}')
-                self.sell_pts.append(self.idx)
-                self.net += reward
-            else:
-                reward = 0.0
-
-        # Action is long = 1.
-        elif action == 1:
-            self.long_count += 1
-
-            if self.hold <= 0.0:
-                self.hold = 1.0
-                self.buy_pts.append(self.idx)
-                self.buy_price = self.prices[self.idx]
-                reward = -self.buy_price - PENALTY
-                self.net += -self.buy_price - PENALTY
-#                print(f'buy @{self.idx+1} R={reward}')
-            else:
-                reward = 0.0
-
-        done = self.idx + 1 >= self.x.shape[1]
-
-#        print(max_sale)
-
-        self.actions.append(action)
-
-        return state, reward, done
 
 
 class Policy(nn.Module):
@@ -148,7 +59,7 @@ class Policy(nn.Module):
 
 
 policy = Policy().to(DEVICE)
-train_env = Environment()
+train_env = Environment(PENALTY)
 optimizer = optim.Adam(policy.parameters(), lr=1e-2)
 
 actions = list()
@@ -269,19 +180,19 @@ for episode in range(1, MAX_EPISODES + 1):
 
     reward_hist.append(avg_train_rewards)
 
-    x = train_env.prices
-    ax1.plot(np.arange(len(x)), x, color='black', linewidth=0.2)
-    for i, action in enumerate(actions):
+    prices = train_env.prices
+    ax1.plot(np.arange(len(prices)), prices, color='black', linewidth=0.2)
+    for idx, action in enumerate(train_env.actions):
+        i = idx + 3
         if action == 0:
             color = 'red'
         else:
             color = 'green'
 
-#        ax1.plot(tuple(range(i + 0, i + 2)), x[0, i + 0:i + 2, 1], color=color, linewidth=0.4)
-        ax1.plot(tuple(range(i + 1, i + 3)), x[i + 1:i + 3], color=color, linewidth=0.4)
+        ax1.plot(tuple(range(i, i + 2)), prices[i: i + 2], color=color, linewidth=0.4)
 
-    ax1.scatter(tuple(t for t in train_env.buy_pts), tuple(x[t] for t in train_env.buy_pts), color='green', s=8)
-    ax1.scatter(tuple(t for t in train_env.sell_pts), tuple(x[t] for t in train_env.sell_pts), color='red', s=8)
+    ax1.scatter(*(zip(*train_env.buy_pts)), color='green', s=8)
+    ax1.scatter(*(zip(*train_env.sell_pts)), color='red', s=8)
 
     ax2.plot(tuple(range(len(reward_hist))), reward_hist, linewidth=0.4)
     ax2.plot(tuple(range(len(reward_hist))), mv_hist, linewidth=0.4)
