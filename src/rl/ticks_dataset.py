@@ -21,7 +21,7 @@ class TicksDataset(Dataset):
         db = sqlite3.connect(IB_PATH)
 
         days = tuple(zip(*db.execute('SELECT date FROM ib_days;').fetchall()))[0]
-        days = days[-1:]
+        days = days[-2:]
 
         self.data = list()
 

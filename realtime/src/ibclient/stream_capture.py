@@ -72,7 +72,7 @@ class StreamListener:
         self.today = datetime.now().strftime('%Y-%m-%d')
 
         # Set shutdown time to 5PM.
-        self.shutdown_time = time(hour=17, minute=0, second=0)
+        self.shutdown_time = time(hour=18, minute=0, second=0)
 
     def start(self):
         """
