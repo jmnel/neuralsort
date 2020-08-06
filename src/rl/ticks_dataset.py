@@ -81,8 +81,8 @@ class TicksDatasetIEX(Dataset):
 
         db = sqlite3.connect(IEX_PATH)
 
-        days = tuple(zip(*db.execute('SELECT date FROM iex_days;').fetchall()))[0]
-        days = days[0:4]
+        days = tuple(zip(*db.execute('SELECT date FROM iex_days ORDER BY date;').fetchall()))[0]
+        days = days[-2:]
 
         self.data = list()
 
@@ -135,7 +135,7 @@ SELECT count(id), symbol FROM iex_trade_reports WHERE day=? GROUP BY symbol;''',
 
         day, symbol = self.data[idx]
 
-        print(f'Getting {day} -> {symbol}')
+#        print(f'Getting {day} -> {symbol}')
 
         db = sqlite3.connect(IEX_PATH)
 

@@ -26,6 +26,7 @@ N_STEP = 10
 DEVICE = 'cuda'
 NUM_LAYERS = 1
 PENALTY = 0.005
+INVALID_PENALTY = 0.1
 
 run_hist = list()
 
@@ -41,7 +42,7 @@ class Policy(nn.Module):
                              residual_channels=32,
                              skip_channels=128,
                              end_channels=128,
-                             input_channels=2,
+                             input_channels=3,
                              output_channels=3,
                              classes=1,
                              output_length=1,
@@ -49,35 +50,37 @@ class Policy(nn.Module):
 
         self.pad = nn.ConstantPad1d((0, 256), 0.0)
 
-        self.fc1 = nn.Linear(3 + 1, 12)
-        self.fc2 = nn.Linear(12, 3)
+#        self.fc1 = nn.Linear(3 + 1, 12)
+#        self.fc2 = nn.Linear(12, 3)
 
     def forward(self, state):
 
-        x, hold_f = state
+        x = state
 
-        x = x.reshape((1, 2, x.shape[1]))
+        x = x.reshape((1, 3, x.shape[1]))
         x = self.pad(x)
         x = x[:, :, :256]
-        y = self.tcn(x)
+        x = self.tcn(x)
 
-        hold_f = hold_f.reshape((1, 1))
-#        print(y.shape)
-#        print(hold_f.shape)
-        z = torch.cat((y, hold_f), dim=1)
-        z = self.fc1(z)
-        z = F.relu(z)
+        return x
 
-        z = self.fc2(z)
+#        z = torch.cat((y, hold_f), dim=1)
+#        z = self.fc1(z)
+#        z = F.relu(z)
+
+#        z = self.fc2(z)
 #        y += torch.autograd.Variable(torch.randn(y.size()).to(DEVICE)) * 0.1
-        return z
+#        return z
 
 
 policy = Policy().to(DEVICE)
-train_env = Environment(PENALTY, 1.0e-3)
-optimizer = optim.Adam(policy.parameters(), lr=2e-2)
+train_env = Environment(PENALTY, INVALID_PENALTY)
+optimizer = optim.Adam(policy.parameters(), lr=1e-2)
+# optimizer = optim.SGD(policy.parameters(), lr=1e-3)
 
 actions = list()
+
+runtime = 0.0
 
 
 def train(env, policy, optimizer, gamma):
@@ -89,18 +92,17 @@ def train(env, policy, optimizer, gamma):
     done = False
     episode_reward = 0
 
-    state, hold_f = env.reset()
+    state = env.reset()
     global actions
     actions = list()
 
     while not done:
 
         state = state.to(DEVICE)
-        hold_f = torch.FloatTensor((hold_f,)).to(DEVICE)
 
         state = state[:, -200:, :]
 
-        action_pred = policy((state, hold_f))
+        action_pred = policy(state)
 
         action_prob = F.softmax(action_pred, dim=1)
 
@@ -109,7 +111,7 @@ def train(env, policy, optimizer, gamma):
         action = dist.sample()
         log_prob_action = dist.log_prob(action).reshape((1, 1))
 
-        (state, hold_f), reward, done = env.step(action.item())
+        state, reward, done = env.step(action.item())
 
         actions.append(action.item())
 
@@ -125,8 +127,11 @@ def train(env, policy, optimizer, gamma):
 
     returns = calculate_returns(rewards, gamma)
 
+    global runtime
+    runtime = (train_env.x.shape[1] - train_env.idx) * 0.1
+
     loss = update_policy(returns.to(DEVICE), log_prob_actions.to(
-        DEVICE), optimizer)
+        DEVICE), optimizer) - runtime
 
     return loss, episode_reward
 
@@ -178,9 +183,10 @@ test_rewards = list()
 reward_hist = list()
 mv_hist = list()
 
+
 for episode in range(1, MAX_EPISODES + 1):
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=False, sharey=False)
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=False, sharey=False)
 
     loss, train_reward = train(train_env, policy, optimizer, GAMMA)
 
@@ -213,7 +219,10 @@ for episode in range(1, MAX_EPISODES + 1):
         ax1.scatter(*(zip(*train_env.sell_pts)), color='red', s=8)
 
     ax2.plot(tuple(range(len(reward_hist))), reward_hist, linewidth=0.4)
-    ax2.plot(tuple(range(len(reward_hist))), mv_hist, linewidth=0.4)
+    ax2.plot(tuple(range(len(reward_hist))), mv_hist, linewidth=0.6)
+
+    ax3.plot(tuple(range(min(200, len(reward_hist)))), reward_hist[-200:], linewidth=0.4)
+    ax3.plot(tuple(range(min(200, len(reward_hist)))), mv_hist[-200:], linewidth=0.6)
 #    ax2.plot(tuple(range(len(reward_hist))), max_raw_hist, linewidth=0.4, color='C3')
 #    ax2.plot(tuple(range(len(reward_hist))), min_raw_hist, linewidth=0.4, color='C4')
     plt.show()
@@ -224,6 +233,7 @@ for episode in range(1, MAX_EPISODES + 1):
 #    print(f'Flat: {train_env.flat_count}, long: {train_env.long_count}')
     print(f'Net: {train_env.net}')
     print(f'sell_r: {train_env.sell_raw}, buy_r: {train_env.buy_raw}, hold_r: {train_env.hold_raw}')
+    print(f'runtime: {runtime}')
 #    p_reward_avg = np.mean(train_env.p_rewards)
 #    r_reward_avg = np.mean(train_env.r_rewards)
 #    print(f'p reward: {p_reward_avg}, r reward: {r_reward_avg}')

@@ -172,7 +172,7 @@ VALUES(?, ?, ?, ?);
 
 
 def main():
-    with sqlite3.connect(settings.DATA_DIRECTORY / settings.IEX_DATABASE_NAME) as db:
+    with sqlite3.connect(settings.DATA_DIRECTORY / (settings.IEX_DATABASE_NAME + '2')) as db:
         prepare_database(db)
         symbols_meta = get_quandl_meta(db)
         parse_csv(db, symbols_meta)

@@ -17,11 +17,17 @@ class Environment:
         self.train_iter = iter(self.train_loader)
 
         self.idx = 0
-        self.init_len = 3
+        self.init_len = 0
         self.trade_penalty = 0.005
 
     def reset(self):
-        self.idx = self.init_len
+        self.idx = 1
+
+#        try:
+#            self.day, self.stock, self.x = next(self.train_iter)
+#        except StopIteration:
+#            self.train_iter = iter(self.train_loader)
+#            self.day, self.stock, self.x = next(self.train_iter)
         self.day, self.stock, self.x = next(iter(self.train_loader))
 
         self.flat_count = 0
@@ -39,20 +45,38 @@ class Environment:
         p = p[:200]
         self.prices = p
 
-        p = p / p[0]
-        p = np.diff(np.log(p)) * 1.0e2
-        self.x = torch.FloatTensor(p)
+        a = 2
+        ema6 = np.zeros_like(p)
+        ema12 = np.zeros_like(p)
+        l1 = 6
+        l2 = 12
+
+        for t in range(len(p)):
+            ema6[t] = p[t] * (a / (1 + l1))
+            ema12[t] = p[t] * (a / (1 + l2))
+            if t == 0:
+                ema6[t] = p[0]
+                ema12[t] = p[0]
+            else:
+                ema6[t] += ema6[t - 1] * (1 - a / (1 + l1))
+                ema12[t] += ema12[t - 1] * (1 - a / (1 + l2))
+
+        self.macd = ema6 - ema12
+        self.ema6 = ema6
+        self.ema12 = ema12
+
+
+#        p = np.diff(np.log(p)) * 1.0e2
+        self.x = torch.FloatTensor(self.macd)
         self.x = self.x.reshape((1, self.x.shape[0], 1))
 
-        self.p_rewards = list()
-        self.r_rewards = list()
-
-        self.hold_len = 0.0
-        self.max_hold_len = 0.0
+        self.actions2 = list()
 
         state = self.x[:, :self.idx, :]
 
         state = torch.cat((state, torch.zeros_like(state)), dim=-1)
+
+        self.hold_start = 0
 
         return state
 
@@ -61,14 +85,21 @@ class Environment:
 
         reward = 0.0
 
+        self.actions2.append(action)
+
         p = self.prices[self.idx]
 
-        if self.idx + 1 < self.x.shape[1]:
-            r = self.x[0, self.idx + 1, 0] * 1e-1
-        else:
-            r = 0.0
-
 #        pprint(self.x[0, self.idx, 0])
+
+#        if self.idx == 198:
+#            print(f'{self.idx} {action}')
+
+        if self.idx == 198:
+            action = 0
+#            print(f'clip: {self.idx} : {self.x.shape[1]}')
+
+#        if self.idx > 190:
+#            print(f'{self.idx} {action}')
 
         if action == 0:
 
@@ -78,13 +109,15 @@ class Environment:
             if self.hold:
                 self.hold = False
                 self.sell_pts.append((self.idx, p))
-                reward = p - self.trade_penalty + self.hold_len
-                self.hold_len = 0
-                self.net += p - self.trade_penalty
-                self.p_rewards.append(reward)
 
-            reward -= r
-            self.r_rewards.append(-r)
+                hold_dist = (self.idx - self.hold_start) * 1.0
+#                if hold_dist < 4:
+#                    hold_dist = -hold_dist
+
+                hold_dist = (hold_dist**2) * 0.01
+
+                reward = p - self.trade_penalty + hold_dist
+                self.net += p - self.trade_penalty
 
         else:
 
@@ -95,32 +128,23 @@ class Environment:
                 self.hold = True
                 self.buy_pts.append((self.idx, p))
                 reward = -p - self.trade_penalty
-                self.buy_price = p
+                self.hold_start = self.idx
                 self.net += -p - self.trade_penalty
-                self.p_rewards.append(reward)
-            else:
-                self.hold_len += 1.0
-
-            reward += r
-            self.r_rewards.append(r)
-
-        self.max_hold_len = max(self.max_hold_len, self.hold_len)
 
         self.idx += 1
         state = self.x[:, :self.idx, :]
 
-        s_actions = torch.FloatTensor(self.actions)
-        s_actions = torch.cat((torch.zeros(3), s_actions), dim=0)
-        s_actions = s_actions.reshape_as(state)
-        state = torch.cat((state, s_actions), dim=-1)
+        done = self.idx + 1 >= self.x.shape[1]
 
-        done = self.idx >= self.x.shape[1]
+        num_pts = len(self.buy_pts) + len(self.sell_pts)
+        if done and num_pts < 4:
+            reward -= 0.5
 
-        if done and self.hold:
-            self.hold = False
-            self.sell_pts.append((self.idx, p))
-            reward = p - self.trade_penalty
-            self.net += p - self.trade_penalty
-            self.p_rewards.append(reward)
+        q = torch.FloatTensor(self.actions2)
+        q = torch.cat((torch.FloatTensor((0.0,)), q))
+        q = q.reshape((1, q.shape[0], 1))
+        state = torch.cat((state, q), dim=-1)
+#        print(f'state: {state.shape}')
+#        state = torch.cat((state, torch.zeros_like()), dim=-1)
 
         return state, reward, done

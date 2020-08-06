@@ -44,32 +44,40 @@ class Environment:
         self.prices = p
 
         p = p / p[0]
-        p = np.diff(np.log(p)) * 1.0e2
+#        p = np.diff(np.log(p)) * 1.0e2
         self.x = torch.FloatTensor(p)
         self.x = self.x.reshape((1, self.x.shape[0], 1))
 
         self.invalid_count = 0
         self.hold_count = 0
 
+        self.hold_f = [-1, -1, -1]
         state = self.x[:, :self.idx, :]
+        self.holds = torch.FloatTensor(self.hold_f)
+        self.holds = self.holds.reshape_as(state)
 
-        state = torch.cat((state, torch.zeros_like(state)), dim=-1)
+        self.rew_hist = [0.0, 0.0, 0.0]
+
+        rew = torch.FloatTensor(self.rew_hist)
+        rew = rew.reshape_as(state)
+
+#        print(state.shape)
+
+        state = torch.cat((state, self.holds, rew), dim=-1)
 
         self.hold_raw = 0
         self.sell_raw = 0
         self.buy_raw = 0
 
-        if self.hold:
-            hold_f = 1.0
-        else:
-            hold_f = 0.0
+        self.run_len = 0
 
-        return (state, hold_f)
+        return state
 
     def step(self, action):
         self.actions.append(action)
 
         reward = 0.0
+        done = False
 
         p = self.prices[self.idx]
 
@@ -83,10 +91,13 @@ class Environment:
         elif action == 1:
             self.sell_raw += 1
             if not self.hold:
-                reward = -self.invalid_penalty
+                #                reward = -self.invalid_penalty
                 self.invalid_count += 1
+                if self.idx > 5:
+                    done = True
             else:
-                reward = p + self.trade_penalty + self.invalid_penalty
+                #                reward = self.invalid_penalty
+                reward += p - self.trade_penalty
                 self.sell_pts.append((self.idx, p))
                 self.net += p - self.trade_penalty
                 self.hold = False
@@ -95,33 +106,38 @@ class Environment:
         elif action == 2:
             self.buy_raw += 1
             if self.hold:
-                reward = -self.invalid_penalty
+                #                reward = -self.invalid_penalty
                 self.invalid_count += 1
+                if self.idx > 5:
+                    done = True
             else:
-                reward = -p - self.trade_penalty + self.invalid_penalty
+                #                reward = self.invalid_penalty
+                reward = -p - self.trade_penalty
                 self.buy_pts.append((self.idx, p))
                 self.net += -p - self.trade_penalty
                 self.hold = True
 
         self.idx += 1
-        done = self.idx >= self.x.shape[1]
+        if not done:
+            done = self.idx >= self.x.shape[1]
 
-        if done and self.hold:
-            reward = p - self.invalid_penalty - self.trade_penalty
-            self.invalid_count += 1
-            self.sell_pts.append((self.idx - 1, p))
-            self.net += p - self.trade_penalty
+        reward += (len(self.buy_pts) + len(self.sell_pts) - self.invalid_count) * 1.0
+#        reward += np.exp(self.idx * 0.1) + (len(self.buy_pts) + len(self.sell_pts) - self.invalid_count) * 1.0
 
         state = self.x[:, :self.idx, :]
 
-        s_actions = torch.FloatTensor(self.actions)
-        s_actions = torch.cat((torch.zeros(3), s_actions), dim=0)
-        s_actions = s_actions.reshape_as(state)
-        state = torch.cat((state, s_actions), dim=-1)
-
         if self.hold:
-            hold_f = 1.0
+            self.hold_f.append(1.0)
         else:
-            hold_f = 0.0
+            self.hold_f.append(-1.0)
 
-        return (state, hold_f), reward, done
+        self.holds = torch.FloatTensor(self.hold_f)
+        self.holds = self.holds.reshape_as(state)
+
+        self.rew_hist.append(reward)
+        rew = torch.FloatTensor(self.rew_hist)
+        rew = rew.reshape_as(state)
+
+        state = torch.cat((state, self.holds, rew), dim=-1)
+
+        return state, reward, done
