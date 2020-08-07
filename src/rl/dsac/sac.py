@@ -8,9 +8,10 @@ import matplotlib
 matplotlib.use('module://matplotlib-backend-kitty')
 import matplotlib.pyplot as plt
 
-from model import Actor, Critic
+from cnn_model import Actor, Critic
 from memory import ReplayBuffer
-from easy_environment import EasyEnvironment
+# from easy_environment import EasyEnvironment
+from tick_environment import TickEnvironment
 
 from torchviz import make_dot
 torch.autograd.set_detect_anomaly(True)
@@ -20,7 +21,7 @@ LOG_SIG_MIN = -20
 TRAINING_EPISODES_PER_EVAL_EPISODE = 10
 EPSILON = 1e-6
 TAU = 0.01
-DEVICE = 'cpu'
+DEVICE = 'cuda'
 
 
 class SAC:
@@ -35,32 +36,43 @@ class SAC:
         self.update_every_n_steps = 1
         self.device = DEVICE
         self.clip_rewards = True
-        self.batch_size = 256
+        self.batch_size = 512
         self.gradient_clipping_norm = 5
         self.automatic_entropy_tuning = True
         self.actor_learning_rate = 3e-4
         self.critic_learning_rate = 3e-4
         self.learning_rate = 5e-3
         self.buffer_size = 1000000
+
+        self.avg_score = 0
+        self.avg_score_hist = list()
+        self.score_hist = list()
 #        self.entropy_weight_term = 1e-3
 
         self.global_step_number = 0
 
-        self.environment = EasyEnvironment()
+        self.environment = TickEnvironment(trade_penalty=0.05)
 
-        self.critic_local_1 = Critic()
-        self.critic_local_2 = Critic()
+        self.state_space = self.environment.state_space.shape[0]
+
+        self.critic_local_1 = Critic(state_space=self.state_space, device=self.device)
+        self.critic_local_2 = Critic(state_space=self.state_space, device=self.device)
         self.critic_optimizer_1 = Adam(self.critic_local_1.parameters(), lr=self.critic_learning_rate, eps=1e-4)
         self.critic_optimizer_2 = Adam(self.critic_local_2.parameters(), lr=self.critic_learning_rate, eps=1e-4)
-        self.critic_target_1 = Critic()
-        self.critic_target_2 = Critic()
+        self.critic_target_1 = Critic(state_space=self.state_space, device=self.device)
+        self.critic_target_2 = Critic(state_space=self.state_space, device=self.device)
+
+        for param in self.critic_target_1.parameters():
+            param.requires_grad = False
+        for param in self.critic_target_2.parameters():
+            param.requires_grad = False
 
         self.copy_model_over(self.critic_local_1, self.critic_target_1)
         self.copy_model_over(self.critic_local_2, self.critic_target_2)
 
         self.memory = ReplayBuffer(buffer_size=self.buffer_size, batch_size=self.batch_size, seed=0)
 
-        self.actor_local = Actor()
+        self.actor_local = Actor(state_space=self.state_space, device=self.device)
         self.actor_optimizer = Adam(self.actor_local.parameters(), lr=self.actor_learning_rate, eps=1e-4)
 
         if self.automatic_entropy_tuning:
@@ -69,6 +81,7 @@ class SAC:
             self.alpha = self.log_alpha.exp()
             self.alpha_optim = Adam([self.log_alpha], lr=self.learning_rate, eps=1e-4)
         else:
+            assert False
             self.alpha = self.entropy_weight_term
 
     def produce_action_and_action_info(self, state):
@@ -78,6 +91,7 @@ class SAC:
 
         """
 
+        state = state.to(self.device)
         action_probabilities = self.actor_local(state)
         max_probability_action = torch.argmax(action_probabilities).unsqueeze(0)
 
@@ -85,6 +99,7 @@ class SAC:
 #        action_distribution = Categorical(action_probabilities)
 
         action = action_distribution.sample().cpu()
+#        print(action)
         z = action_probabilities == 0.0
         z = z.float() * 1e-8
         log_action_probabilities = torch.log(action_probabilities + z)
@@ -130,6 +145,7 @@ class SAC:
         return policy_loss, log_action_probabilities
 
     def save_result(self):
+        print((self.episode_number - 1) % TRAINING_EPISODES_PER_EVAL_EPISODE == 0)
         if self.episode_number == 1:
             self.game_full_episode_scores.extend([self.total_episode_score_so_far])
             self.rolling_results.append(np.mean(self.game_full_episode_scores[-1 * self.rolling_score_window:]))
@@ -158,21 +174,21 @@ class SAC:
         self.episode_achieved_goals = []
         self.episode_observations = []
 
-    def take_optimization_step(self, optimizer, network, loss, clipping_norm=None, retain_graph=False, name=''):
-        #        print(f'optim step: {name}')
+    def take_optimization_step(self, optimizer, network, loss, clipping_norm=None, retain_graph=False):
         if not isinstance(network, list):
             network = [network]
         optimizer.zero_grad()
-        if name == 'a':
-            make_dot(loss).render(view=True)
+#        if name == 'a':
+#            make_dot(loss).render(view=True)
 #            print(len(network))
         loss.backward(retain_graph=retain_graph)
 
-#        print('Loss: {:.4f}'.format(loss.item()))
         if clipping_norm is not None:
             for net in network:
                 torch.nn.utils.clip_grad_norm_(net.parameters(), clipping_norm)
         optimizer.step()
+#        for net in network:
+#            net.reset
 
     def step(self):
         """
@@ -183,13 +199,14 @@ class SAC:
         eval_ep = self.episode_number % TRAINING_EPISODES_PER_EVAL_EPISODE == 0 and self.do_evaluation_iterations
         self.episode_step_number_val = 0
         while not self.done:
+            #            print(self.episode_step_number_val, len(self.environment))
             self.episode_step_number_val += 1
             self.action = self.pick_action(eval_ep)
             self.conduct_action(self.action)
             if self.time_for_critic_and_actor_to_learn():
                 for _ in range(self.learning_updates_per_learning_session):
                     self.learn()
-            mask = False if self.episode_step_number_val >= len(self.environment) else self.done
+            mask = False if self.episode_step_number_val + 2 >= len(self.environment) else self.done
             if not eval_ep:
                 self.save_experience(experience=(self.state, self.action, self.reward, self.next_state, mask))
             self.state = self.next_state
@@ -236,7 +253,6 @@ class SAC:
         return alpha_loss
 
     def learn(self):
-        #        print('learning')
         state_batch, action_batch, reward_batch, next_state_batch, mask_batch = self.sample_experiences()
 #        print(type(state_batch))
         qf1_loss, qf2_loss = self.calculate_critic_losses(state_batch,
@@ -244,20 +260,55 @@ class SAC:
                                                           reward_batch,
                                                           next_state_batch,
                                                           mask_batch)
+        policy_loss, log_pi = self.calculate_actor_loss(state_batch)
+
+#        self.take_optimization_step(self.critic_optimizer_1,
+#                                    self.critic_local_1,
+#                                    qf1_loss,
+#                                    self.gradient_clipping_norm)
+#        self.take_optimization_step(self.critic_optimizer_2,
+#                                    self.critic_local_2,
+#                                    qf2_loss,
+#                                    self.gradient_clipping_norm)
+
+#        self.take_optimization_step(self.actor_optimizer,
+#                                    self.actor_local,
+#                                    policy_loss,
+#                                    self.gradient_clipping_norm)
+
+#        self.soft_update_of_target_network(self.critic_local_1,
+#                                           self.critic_target_1,
+#                                           self.tau)
+#        self.soft_update_of_target_network(self.critic_local_2,
+#                                           self.critic_target_2,
+#                                           self.tau)
+        if self.automatic_entropy_tuning:
+            alpha_loss = self.calculate_entropy_tuning_loss(log_pi)
+#            self.take_optimization_step(self.alpha_optim, None, alpha_loss, None)
+#            self.alpha = self.log_alpha.exp()
+        else:
+            assert False
+            alpha_loss = None
+
+        self.update_all_parameters(qf1_loss, qf2_loss, policy_loss, alpha_loss)
+
+    def update_all_parameters(self, critic_loss_1, critic_loss_2, actor_loss, alpha_loss):
+        """
+        Updates the parameters of the actor, the two critics, and the entropy parameter.
+
+        """
 
         self.take_optimization_step(self.critic_optimizer_1,
                                     self.critic_local_1,
-                                    qf1_loss,
+                                    critic_loss_1,
                                     self.gradient_clipping_norm)
         self.take_optimization_step(self.critic_optimizer_2,
                                     self.critic_local_2,
-                                    qf2_loss,
+                                    critic_loss_2,
                                     self.gradient_clipping_norm)
-
-        policy_loss, log_pi = self.calculate_actor_loss(state_batch)
         self.take_optimization_step(self.actor_optimizer,
                                     self.actor_local,
-                                    policy_loss,
+                                    actor_loss,
                                     self.gradient_clipping_norm)
 
         self.soft_update_of_target_network(self.critic_local_1,
@@ -266,60 +317,10 @@ class SAC:
         self.soft_update_of_target_network(self.critic_local_2,
                                            self.critic_target_2,
                                            self.tau)
-        if self.automatic_entropy_tuning:
-            alpha_loss = self.calculate_entropy_tuning_loss(log_pi)
+
+        if alpha_loss is not None:
             self.take_optimization_step(self.alpha_optim, None, alpha_loss, None)
             self.alpha = self.log_alpha.exp()
-#        else:
-#            alpha_loss = None
-
-#        self.update_all_parameters(qf1_loss, qf2_loss, policy_loss, alpha_loss)
-
-    def update_all_parameters(self, critic_loss_1, critic_loss_2, actor_loss, alpha_loss):
-        """
-        Updates the parameters of the actor, the two critics, and the entropy parameter.
-
-        """
-        pass
-
-#        self.take_optimization_step(self.critic_optimizer_1,
-#                                    self.critic_local_1,
-#                                    critic_loss_1,
-#                                    self.gradient_clipping_norm)
-#        self.take_optimization_step(self.critic_optimizer_2,
-#                                    self.critic_local_2,
-#                                    critic_loss_2,
-#                                    self.gradient_clipping_norm)
-#        self.take_optimization_step(self.actor_optimizer,
-#                                    self.actor_local,
-#                                    actor_loss,
-#                                    self.gradient_clipping_norm)
-#        self.take_optimization_step(self.critic_optimizer_1,
-#                                    self.critic_local_1,
-#                                    critic_loss_1,
-#                                    None,
-#                                    name='c1')
-#        self.take_optimization_step(self.critic_optimizer_2,
-#                                    self.critic_local_2,
-#                                    critic_loss_2,
-#                                    None,
-#                                    name='c2')
-
-#        self.take_optimization_step(self.actor_optimizer,
-#                                    self.actor_local,
-#                                    actor_loss,
-#                                    None,
-#                                    name='a')
-#        self.soft_update_of_target_network(self.critic_local_1,
-#                                           self.critic_target_1,
-#                                           self.tau)
-#        self.soft_update_of_target_network(self.critic_local_2,
-#                                           self.critic_target_2,
-#                                           self.tau)
-
-#        if alpha_loss is not None:
-#            self.take_optimization_step(self.alpha_optim, None, alpha_loss, None)
-#            self.alpha = self.log_alpha.exp()
 
     def save_experience(self, memory=None, experience=None):
         if memory is None:
@@ -341,6 +342,7 @@ class SAC:
         """
 
         self.next_state, self.reward, self.done = self.environment.step(action)
+#        print(self.environment.idx, self.done)
         self.total_episode_score_so_far += self.reward
         if self.clip_rewards:
             self.reward = np.clip(self.reward, -1.0, 1.0)
@@ -367,18 +369,32 @@ class SAC:
         fig, (ax1, ax2) = plt.subplots(2, 1)
         env = self.environment
         ax1.plot(np.arange(len(env.prices)), env.prices, linewidth=0.3, color='black')
+
         for t0, t1 in env.hold_intervals:
             ax1.plot(np.arange(t0, t1 + 1), env.prices[t0:t1 + 1], color='green', linewidth=0.4)
         for t0, t1 in env.flat_intervals:
             ax1.plot(np.arange(t0, t1 + 1), env.prices[t0:t1 + 1], color='red', linewidth=0.4)
+
         if len(env.buy_pts) > 0:
             ax1.scatter(*zip(*env.buy_pts), s=4, color='green')
         if len(env.sell_pts) > 0:
             ax1.scatter(*zip(*env.sell_pts), s=4, color='red')
+
+        if self.episode_number == 0:
+            self.avg_score = self.total_episode_score_so_far
+        else:
+            self.avg_score = (1 - 0.05) * self.avg_score + 0.05 * self.total_episode_score_so_far
+        self.avg_score_hist.append(self.avg_score)
+        self.score_hist.append(self.total_episode_score_so_far)
+
+        ax2.plot(np.arange(len(self.score_hist)), self.score_hist, linewidth=0.2)
+        ax2.plot(np.arange(len(self.score_hist)), self.avg_score_hist, linewidth=0.5)
+
         plt.show()
         print('-' * 20)
-        print('Episode score {} '.format(self.total_episode_score_so_far))
+        print('Episode {}, score {} '.format(self.episode_number, self.total_episode_score_so_far))
         print('Buy: {}, sell: {}, net: {}'.format(len(env.buy_pts), len(env.sell_pts), env.net))
+        print(f'alpha: {self.alpha.item()}')
 #        print(
         print('-' * 20)
 
@@ -400,4 +416,4 @@ def create_actor_distribution(action_types, actor_output, action_size):
 
 agent = SAC()
 
-agent.run_n_episodes(50)
+agent.run_n_episodes(1000)

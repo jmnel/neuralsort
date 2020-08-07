@@ -22,14 +22,18 @@ class EasyEnvironment:
         self.init_len = 10
         self.trade_penalty = trade_penalty
 
-        self.prices = np.cos(np.linspace(0, 10, 400))
+        t = np.linspace(0, 10, 400) + np.random.randn(1) * 40
+        self.prices = np.cos(t * 4) * (1 - 0.05 * np.cos(10 * t)) + 0.001 * np.random.randn(len(t))
         self.t = np.arange(len(self.prices))
-
-        plt.plot(self.t, self.prices, linewidth=0.4)
 
         self.action_space = ActionSpace()
 
     def reset(self):
+
+        t = np.linspace(0, 10, 400) + np.random.randn(1) * 40
+        self.prices = np.cos(t * 4) * (1 - 0.05 * np.cos(10 * t)) + 0.01 * np.random.randn(len(t))
+        self.prices += 0.5 * np.random.rand(1) * t
+        self.t = np.arange(len(self.prices))
 
         self.idx = self.init_len
 
@@ -44,7 +48,7 @@ class EasyEnvironment:
 
         self.net = 0
 
-        p = self.prices[self.idx - self.init_len + 1: self.idx + 1]
+        p = np.diff(self.prices[self.idx - self.init_len: self.idx + 1])
         state = p
         return state
 
@@ -75,7 +79,10 @@ class EasyEnvironment:
         self.actions.append(action)
         done = self.idx + 1 >= self.prices.shape[0]
 
-        p = self.prices[self.idx - self.init_len + 1: self.idx + 1]
+#        if done:
+
+        p = np.diff(self.prices[self.idx - self.init_len: self.idx + 1])
+#        p = self.prices[self.idx - self.init_len + 1: self.idx + 1]
         state = p
         return state, reward, done
 
