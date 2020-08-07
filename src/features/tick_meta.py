@@ -9,6 +9,11 @@ db = sqlite3.connect(IEX_DB_PATH)
 
 days = tuple(zip(*db.execute('SELECT date FROM iex_days;').fetchall()))[0]
 
-pprint(days)
+days = days[-3:]
+for day in days:
+
+    rows = db.execute('SELECT time
+
+
 
 db.close()
