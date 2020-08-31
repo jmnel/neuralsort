@@ -144,7 +144,7 @@ class StreamListener:
                     assert self.last_price[request_id] is not None
                     assert self.last_time[request_id] is not None
 
-                    print(f'{symbol}: ${price}, {size} shares')
+                    print(f'{symbol}: ${price}, {size} lots')
 
                     # Store trade report in database.
                     t = self.last_time[request_id]

@@ -12,6 +12,8 @@ QUANDL_IMPORT_INFO_FILE = 'qdl_import_info.json'
 
 IEX_DATABASE_NAME = 'iex_tops.sqlite3'
 
+RL_DATABSE_NAME = 'rl.sqlite3'
+
 IMPORT_QUANDL_RAW = True
 
 IB_DATABASE_NAME = 'ib.sqlite3'

@@ -8,7 +8,8 @@ import matplotlib
 matplotlib.use('module://matplotlib-backend-kitty')
 import matplotlib.pyplot as plt
 
-from tick_bar_dataset import TickBarDataset
+#from tick_bar_dataset import TickBarDataset
+from iex_ticks_dataset import TickDatasetIEX
 
 
 class ActionSpace:
@@ -26,7 +27,10 @@ class StateSpace:
 class TickEnvironment:
 
     def __init__(self, trade_penalty=0.05, invalid_penalty=0.1):
-        self.train_loader = DataLoader(TickBarDataset(mode='train'),
+        #        self.train_loader = DataLoader(TickBarDataset(mode='train'),
+        #                                       batch_size=1,
+        #                                       shuffle=True)
+        self.train_loader = DataLoader(TickDatasetIEX(mode='train'),
                                        batch_size=1,
                                        shuffle=True)
         self.train_iter = iter(self.train_loader)
@@ -46,15 +50,19 @@ class TickEnvironment:
             self.train_iter = iter(self.train_loader)
             self.day, self.stock, self.ticks = next(self.train_iter)
 
-
 #        it = iter(self.train_loader)
 #        for i in range(6):
 #            next(it)
 #        self.day, self.stock, self.ticks = next(it)
 
-        self.prices = np.zeros(self.ticks.shape[1])
-        for i in range(len(self.prices)):
-            self.prices[i] = 0.5 * (self.ticks[0, i, 2] + self.ticks[0, i, 5])
+        self.ticks = self.ticks[:, :200, :]
+
+        self.prices = self.ticks[0, :, 1]
+
+#        print(self.prices.shape)
+#        self.prices = np.zeros(self.ticks.shape[1])
+#        for i in range(len(self.prices)):
+#            self.prices[i] = 0.5 * (self.ticks[0, i, 2] + self.ticks[0, i, 5])
 
 #        self.idx = self.init_len
         self.idx = 0
@@ -74,7 +82,8 @@ class TickEnvironment:
         self.net = 0
 
 #        p = np.diff(np.log(self.prices[self.idx - self.init_len: self.idx + 1])) * 10.0
-        self.data = np.diff(np.log(self.prices))
+#        self.data = np.diff(np.log(self.prices))
+        self.data = self.prices
         n = self.state_space.shape[0]
         self.data = np.concatenate((np.zeros(n), self.data))
 
@@ -84,6 +93,9 @@ class TickEnvironment:
 #        p = self.prices[self.idx - self.init_len + 1: self.idx + 1]
 #        state = p
         state = np.concatenate((p, (0,)))
+
+#        print(f'here: {state.shape}')
+#        pprint(state)
         return state
 
     def step(self, action):
@@ -111,7 +123,7 @@ class TickEnvironment:
 
         self.net += reward
 
-        self.rewards.append(action)
+#        self.rewards.append(action)
 
         self.idx += 1
         self.actions.append(action)

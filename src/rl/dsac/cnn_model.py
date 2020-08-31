@@ -19,17 +19,18 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
 
         self.state_space = state_space
+        self.device = device
 
-        self.conv1 = nn.Conv1d(in_channels=1, out_channels=4, kernel_size=2)
-        self.conv2 = nn.Conv1d(in_channels=4, out_channels=16, kernel_size=2)
-        self.conv3 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=2)
+        self.conv1 = nn.Conv1d(in_channels=10, out_channels=16, kernel_size=2)
+        self.conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=2)
+        self.conv3 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=2)
 
-        self.batch1 = nn.BatchNorm1d(4)
-        self.batch2 = nn.BatchNorm1d(16)
-        self.batch3 = nn.BatchNorm1d(32)
+        self.batch1 = nn.BatchNorm1d(16)
+        self.batch2 = nn.BatchNorm1d(32)
+        self.batch3 = nn.BatchNorm1d(64)
 
-        self.linear1 = nn.Linear(320 + 1, 128)
-        self.linear2 = nn.Linear(128, 2)
+        self.linear1 = nn.Linear(3072, 512)
+        self.linear2 = nn.Linear(512, 3)
 
         self.elu1 = nn.ELU()
         self.elu2 = nn.ELU()
@@ -42,8 +43,13 @@ class Critic(nn.Module):
 
     def forward(self, state):
 
-        x, a = state[:, :-1], state[:, -1:]
-        x = x.unsqueeze(1)
+        #        print(self.device)
+        #        x, a = state[:, :-1], state[:, -1:]
+        #        x = x.unsqueeze(1)
+
+        #        print(state.shape)
+        #        print(x.shape)
+        x = state.reshape((state.shape[0], state.shape[2], state.shape[1]))
 
         x = self.conv1(x)
         x = self.batch1(x)
@@ -60,11 +66,10 @@ class Critic(nn.Module):
         x = self.elu3(x)
 
         x = x.flatten(start_dim=1)
-        z = torch.cat((x, a), dim=-1)
-        z = self.elu4(self.linear1(z))
-        z = self.linear2(z)
+        x = self.elu4(self.linear1(x))
+        x = self.linear2(x)
 
-        return z
+        return x
 
     def reset(self):
         pass
@@ -76,17 +81,18 @@ class Actor(nn.Module):
         super(Actor, self).__init__()
 
         self.state_space = state_space
+        self.device = device
 
-        self.conv1 = nn.Conv1d(in_channels=1, out_channels=4, kernel_size=2)
-        self.conv2 = nn.Conv1d(in_channels=4, out_channels=16, kernel_size=2)
-        self.conv3 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=2)
+        self.conv1 = nn.Conv1d(in_channels=10, out_channels=16, kernel_size=2)
+        self.conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=2)
+        self.conv3 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=2)
 
-        self.batch1 = nn.BatchNorm1d(4)
-        self.batch2 = nn.BatchNorm1d(16)
-        self.batch3 = nn.BatchNorm1d(32)
+        self.batch1 = nn.BatchNorm1d(16)
+        self.batch2 = nn.BatchNorm1d(32)
+        self.batch3 = nn.BatchNorm1d(64)
 
-        self.linear1 = nn.Linear(320 + 1, 128)
-        self.linear2 = nn.Linear(128, 2)
+        self.linear1 = nn.Linear(3072, 512)
+        self.linear2 = nn.Linear(512, 3)
 
         self.elu1 = nn.ELU()
         self.elu2 = nn.ELU()
@@ -99,8 +105,11 @@ class Actor(nn.Module):
 
     def forward(self, state):
 
-        x, a = state[:, :-1], state[:, -1:]
-        x = x.unsqueeze(1)
+        #        print(state.shape)
+        #        x, a = state[:, :-1], state[:, -1:]
+        #        x = x.unsqueeze(1)
+
+        x = state.reshape((state.shape[0], state.shape[2], state.shape[1]))
 
         x = self.conv1(x)
         x = self.batch1(x)
@@ -117,11 +126,13 @@ class Actor(nn.Module):
         x = self.elu3(x)
 
         x = x.flatten(start_dim=1)
-        z = torch.cat((x, a), dim=-1)
-        z = self.elu4(self.linear1(z))
-        z = self.linear2(z)
 
-        return F.softmax(z, dim=-1)
+#        print(x.shape)
+
+        x = self.elu4(self.linear1(x))
+        x = self.linear2(x)
+
+        return F.softmax(x, dim=-1)
 
     def reset(self):
         pass

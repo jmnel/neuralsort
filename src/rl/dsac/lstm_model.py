@@ -1,10 +1,10 @@
-from pprint import pprint
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 HIDDEN_SIZE = 200
 LSTM_LAYERS = 1
+LSTM_FEATUES = 10
 
 
 def weights_init_(m):
@@ -19,12 +19,13 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
 
         self.state_space = state_space
+        self.device = device
 
-        self.lstm = nn.LSTM(1, HIDDEN_SIZE, LSTM_LAYERS, batch_first=True, bias=False)
+        self.lstm = nn.LSTM(LSTM_FEATUES, HIDDEN_SIZE, LSTM_LAYERS, batch_first=True, bias=False)
 
-        self.linear1 = nn.Linear(HIDDEN_SIZE + 1, HIDDEN_SIZE)
+        self.linear1 = nn.Linear(HIDDEN_SIZE, HIDDEN_SIZE)
         self.linear2 = nn.Linear(HIDDEN_SIZE, HIDDEN_SIZE)
-        self.linear3 = nn.Linear(HIDDEN_SIZE, 2)
+        self.linear3 = nn.Linear(HIDDEN_SIZE, 3)
 
         self.hidden_cell = (torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(device),
                             torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(device))
@@ -38,22 +39,23 @@ class Critic(nn.Module):
 
     def forward(self, state):
 
-        x, a = state[:, :-1], state[:, -1:]
-        x = x.unsqueeze(-1)
-        x, self.hidden_cell = self.lstm(x, self.hidden_cell)
+        #        state_env, state_agent = state
+
+        x, self.hidden_cell = self.lstm(state, self.hidden_cell)
 
         x = x[:, -1, :]
-#        x = F.tanh(x)
-        z = torch.cat((x, a), dim=-1)
-        z = self.linear1(self.elu1(z))
+#        state_agent = state_agent.unsqueeze(dim=0)
+#        z = torch.cat((state_env, state_agent), dim=-1)
+        z = self.linear1(self.elu1(x))
         z = self.linear2(self.elu2(z))
         z = self.linear3(z)
 
         return z
 
     def reset(self):
-        self.hidden_cell = (torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(device),
-                            torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(device))
+        print('reset1')
+#        self.hidden_cell = (torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(self.device),
+#                            torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(self.device))
 
 
 class Actor(nn.Module):
@@ -62,15 +64,16 @@ class Actor(nn.Module):
         super(Actor, self).__init__()
 
         self.state_space = state_space
+        self.device = device
 
-        self.lstm = nn.LSTM(1, HIDDEN_SIZE, LSTM_LAYERS, batch_first=True, bias=False)
+        self.lstm = nn.LSTM(LSTM_FEATUES, HIDDEN_SIZE, LSTM_LAYERS, batch_first=True, bias=False)
 
-        self.linear1 = nn.Linear(HIDDEN_SIZE + 1, HIDDEN_SIZE)
+        self.linear1 = nn.Linear(HIDDEN_SIZE, HIDDEN_SIZE)
         self.linear2 = nn.Linear(HIDDEN_SIZE, HIDDEN_SIZE)
-        self.linear3 = nn.Linear(HIDDEN_SIZE, 2)
+        self.linear3 = nn.Linear(HIDDEN_SIZE, 3)
 
-        self.hidden_cell = (torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(device),
-                            torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(device))
+        self.hidden_cell = (torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(self.device),
+                            torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(self.device))
 
         self.elu1 = nn.ELU()
         self.elu2 = nn.ELU()
@@ -81,26 +84,24 @@ class Actor(nn.Module):
 
     def forward(self, state):
 
-        x, a = state[:, :-1], state[:, -1:]
-        x = x.unsqueeze(-1)
+        #        state_env, state_agent = state
 
-#        print(x)
-#        print()
+        #        print(f'state: {state.shape}')
 
-        x, self.hidden_cell = self.lstm(x, self.hidden_cell)
+        x, self.hidden_cell = self.lstm(state, self.hidden_cell)
 
         x = x[:, -1, :]
 
-#        x = F.tanh(x)
-#        pprint(x)
-#        print()
-        z = torch.cat((x, a), dim=-1)
-        z = self.linear1(self.elu1(z))
+#        state_agent = state_agent.unsqueeze(dim=0)
+#        z = torch.cat((x, state_agent), dim=-1)
+
+        z = self.linear1(self.elu1(x))
         z = self.linear2(self.elu2(z))
         z = self.linear3(z)
 
         return F.softmax(z, dim=-1)
 
     def reset(self):
-        self.hidden_cell = (torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(device),
-                            torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(device))
+        print('reset2')
+#        self.hidden_cell = (torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(self.device),
+#                            torch.zeros(LSTM_LAYERS, 1, HIDDEN_SIZE).to(self.device))

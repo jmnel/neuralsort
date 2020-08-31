@@ -1,6 +1,6 @@
 import sqlite3
 from pprint import pprint
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from pathlib import Path
 import shutil
 
@@ -17,12 +17,14 @@ import numpy as np
 
 import settings
 
-IB_DB_PATH = settings.DATA_DIRECTORY / (settings.IB_DATABASE_NAME + '-2')
+IB_DB_PATH = settings.DATA_DIRECTORY / (settings.IB_DATABASE_NAME)
 
 end_day = datetime.now().date()
-end_day -= timedelta(days=1)
+#end_day -= timedelta(days=1)
 
 end_day = end_day.strftime('%Y-%m-%d')
+
+print(end_day)
 
 db = sqlite3.connect(IB_DB_PATH)
 
@@ -55,6 +57,10 @@ WHERE day=? AND symbol=? AND timestamp != 0 ORDER BY timestamp;''', (day, symbol
         ts = tuple(datetime.fromtimestamp(t) for t in ts)
         price = tuple(p * 1e-2 for p in price)
 
+        xy = tuple(zip(ts, price))
+        xy = tuple(filter(lambda x: x[0].time() >= time(9, 30, 0) and x[0].time() <= time(16, 0, 0), xy))
+        ts, price = tuple(zip(*xy))
+
         fig, ax = plt.subplots(1, 1)
         ax.plot(ts, price, linewidth=0.4)
         ax.set_xlabel('Time', fontsize='medium')
@@ -69,16 +75,21 @@ WHERE day=? AND symbol=? AND timestamp != 0 ORDER BY timestamp;''', (day, symbol
                     figsize=(800, 400))
         plt.close()
 
-        ts, o, h, l, c, v = tuple(zip(*
-                                      db.execute('''
+        rows2 = db.execute('''
 SELECT timestamp, open, high, low, close, volume
 FROM ticks_5 WHERE symbol=? AND day=?
-ORDER BY idx;''', (symbol, day)).fetchall()))
+ORDER BY idx;''', (symbol, day)).fetchall()
 
+        if len(rows2) == 0:
+            continue
+        rows2 = tuple((datetime.fromtimestamp(r[0]), *r[1:]) for r in rows2)
+        rows2 = tuple(filter(lambda x: x[0].time() >= time(9, 30, 0) and x[0].time() <= time(16, 0, 0), rows2))
+
+        ts, o, h, l, c, v = tuple(zip(*rows2))
         if len(ts) == 0:
             continue
 
-        ts = tuple(datetime.fromtimestamp(t) for t in ts)
+#        ts = tuple(datetime.fromtimestamp(t) for t in ts)
 
         data = {'Open': o,
                 'High': h,

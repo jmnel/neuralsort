@@ -3,22 +3,25 @@ import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
 import numpy as np
+from pprint import pprint
 
 import matplotlib
 matplotlib.use('module://matplotlib-backend-kitty')
 import matplotlib.pyplot as plt
 
+#from cnn_model import Actor, Critic
 from cnn_model import Actor, Critic
 from memory import ReplayBuffer
 # from easy_environment import EasyEnvironment
-from tick_environment import TickEnvironment
+#from tick_environment import TickEnvironment
+from ctrl_environment import TickEnvironment
 
 from torchviz import make_dot
 torch.autograd.set_detect_anomaly(True)
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
-TRAINING_EPISODES_PER_EVAL_EPISODE = 10
+TRAINING_EPISODES_PER_EVAL_EPISODE = 2
 EPSILON = 1e-6
 TAU = 0.01
 DEVICE = 'cuda'
@@ -27,7 +30,7 @@ DEVICE = 'cuda'
 class SAC:
 
     def __init__(self):
-        self.action_size = 2
+        self.action_size = 3
         self.do_evaluation_iterations = True
         self.discount = 0.99
         self.learning_updates_per_learning_session = 1
@@ -36,7 +39,8 @@ class SAC:
         self.update_every_n_steps = 1
         self.device = DEVICE
         self.clip_rewards = True
-        self.batch_size = 512
+        self.batch_size = 16
+#        self.batch_size = 256
         self.gradient_clipping_norm = 5
         self.automatic_entropy_tuning = True
         self.actor_learning_rate = 3e-4
@@ -51,7 +55,7 @@ class SAC:
 
         self.global_step_number = 0
 
-        self.environment = TickEnvironment(trade_penalty=0.05)
+        self.environment = TickEnvironment(trade_penalty=0.005)
 
         self.state_space = self.environment.state_space.shape[0]
 
@@ -70,7 +74,7 @@ class SAC:
         self.copy_model_over(self.critic_local_1, self.critic_target_1)
         self.copy_model_over(self.critic_local_2, self.critic_target_2)
 
-        self.memory = ReplayBuffer(buffer_size=self.buffer_size, batch_size=self.batch_size, seed=0)
+        self.memory = ReplayBuffer(buffer_size=self.buffer_size, batch_size=self.batch_size, seed=0, device=self.device)
 
         self.actor_local = Actor(state_space=self.state_space, device=self.device)
         self.actor_optimizer = Adam(self.actor_local.parameters(), lr=self.actor_learning_rate, eps=1e-4)
@@ -91,6 +95,7 @@ class SAC:
 
         """
 
+#        state = (state[0].to(self.device), state[1].to(self.device))
         state = state.to(self.device)
         action_probabilities = self.actor_local(state)
         max_probability_action = torch.argmax(action_probabilities).unsqueeze(0)
@@ -99,6 +104,7 @@ class SAC:
 #        action_distribution = Categorical(action_probabilities)
 
         action = action_distribution.sample().cpu()
+#        print(action)
 #        print(action)
         z = action_probabilities == 0.0
         z = z.float() * 1e-8
@@ -122,8 +128,16 @@ class SAC:
             min_qf_next_target = min_qf_next_target.mean(dim=1).unsqueeze(-1)
             next_q_value = reward_batch + (1.0 - mask_batch) * self.discount * (min_qf_next_target)
 
+#        pprint(action_batch.long())
+#        qf1_a = self.critic_local_1(state_batch)
+#        qf2_a = self.critic_local_2(state_batch)
+
+#        print(qf1_a)
+#        print(action_batch.long())
+
         qf1 = self.critic_local_1(state_batch).gather(1, action_batch.long())
         qf2 = self.critic_local_2(state_batch).gather(1, action_batch.long())
+#        qf2 = qf2_a.gather(1, action_batch.long())
         qf1_loss = F.mse_loss(qf1, next_q_value)
         qf2_loss = F.mse_loss(qf2, next_q_value)
         return qf1_loss, qf2_loss
@@ -145,7 +159,7 @@ class SAC:
         return policy_loss, log_action_probabilities
 
     def save_result(self):
-        print((self.episode_number - 1) % TRAINING_EPISODES_PER_EVAL_EPISODE == 0)
+        #        print((self.episode_number - 1) % TRAINING_EPISODES_PER_EVAL_EPISODE == 0)
         if self.episode_number == 1:
             self.game_full_episode_scores.extend([self.total_episode_score_so_far])
             self.rolling_results.append(np.mean(self.game_full_episode_scores[-1 * self.rolling_score_window:]))
@@ -174,10 +188,11 @@ class SAC:
         self.episode_achieved_goals = []
         self.episode_observations = []
 
-    def take_optimization_step(self, optimizer, network, loss, clipping_norm=None, retain_graph=False):
+    def take_optimization_step(self, optimizer, network, loss, clipping_norm=None, retain_graph=False, name=''):
         if not isinstance(network, list):
             network = [network]
         optimizer.zero_grad()
+#        network[0].reset()
 #        if name == 'a':
 #            make_dot(loss).render(view=True)
 #            print(len(network))
@@ -187,6 +202,9 @@ class SAC:
             for net in network:
                 torch.nn.utils.clip_grad_norm_(net.parameters(), clipping_norm)
         optimizer.step()
+
+#        print(f'net: {name}')
+#        print(len(network))
 #        for net in network:
 #            net.reset
 
@@ -196,9 +214,12 @@ class SAC:
 
         """
 
+#        print(f'Step {self.episode_number}')
+
         eval_ep = self.episode_number % TRAINING_EPISODES_PER_EVAL_EPISODE == 0 and self.do_evaluation_iterations
         self.episode_step_number_val = 0
         while not self.done:
+            #            print(f'\t{self.global_step_number} {len(self.environment)}')
             #            print(self.episode_step_number_val, len(self.environment))
             self.episode_step_number_val += 1
             self.action = self.pick_action(eval_ep)
@@ -206,6 +227,7 @@ class SAC:
             if self.time_for_critic_and_actor_to_learn():
                 for _ in range(self.learning_updates_per_learning_session):
                     self.learn()
+#                    print(f'time for learn {self.episode_step_number_val}')
             mask = False if self.episode_step_number_val + 2 >= len(self.environment) else self.done
             if not eval_ep:
                 self.save_experience(experience=(self.state, self.action, self.reward, self.next_state, mask))
@@ -233,8 +255,13 @@ class SAC:
     def actor_pick_action(self, state=None, eval=False):
         if state is None:
             state = self.state
-        state = torch.FloatTensor([state]).to(self.device)
-        if len(state.shape) == 1:
+
+#        state = (state[0].to(self.device), state[1].to(self.device))
+        state = state.to(self.device)
+#        state = torch.FloatTensor([state[0]]).to(self.device),
+#        torch.FloatTensor
+
+        if len(state[0].shape) == 1:
             state = state.unsqueeze(0)
         if eval == False:
             action, _, _ = self.produce_action_and_action_info(state)
@@ -253,6 +280,7 @@ class SAC:
         return alpha_loss
 
     def learn(self):
+        #        print('learning')
         state_batch, action_batch, reward_batch, next_state_batch, mask_batch = self.sample_experiences()
 #        print(type(state_batch))
         qf1_loss, qf2_loss = self.calculate_critic_losses(state_batch,
@@ -262,26 +290,6 @@ class SAC:
                                                           mask_batch)
         policy_loss, log_pi = self.calculate_actor_loss(state_batch)
 
-#        self.take_optimization_step(self.critic_optimizer_1,
-#                                    self.critic_local_1,
-#                                    qf1_loss,
-#                                    self.gradient_clipping_norm)
-#        self.take_optimization_step(self.critic_optimizer_2,
-#                                    self.critic_local_2,
-#                                    qf2_loss,
-#                                    self.gradient_clipping_norm)
-
-#        self.take_optimization_step(self.actor_optimizer,
-#                                    self.actor_local,
-#                                    policy_loss,
-#                                    self.gradient_clipping_norm)
-
-#        self.soft_update_of_target_network(self.critic_local_1,
-#                                           self.critic_target_1,
-#                                           self.tau)
-#        self.soft_update_of_target_network(self.critic_local_2,
-#                                           self.critic_target_2,
-#                                           self.tau)
         if self.automatic_entropy_tuning:
             alpha_loss = self.calculate_entropy_tuning_loss(log_pi)
 #            self.take_optimization_step(self.alpha_optim, None, alpha_loss, None)
@@ -298,18 +306,22 @@ class SAC:
 
         """
 
+#        self.critic_local_1.reset()
+#        self.critic_local_2.reset()
+#        self.actor_local.reset()
+
         self.take_optimization_step(self.critic_optimizer_1,
                                     self.critic_local_1,
                                     critic_loss_1,
-                                    self.gradient_clipping_norm)
+                                    self.gradient_clipping_norm, name='c1')
         self.take_optimization_step(self.critic_optimizer_2,
                                     self.critic_local_2,
                                     critic_loss_2,
-                                    self.gradient_clipping_norm)
+                                    self.gradient_clipping_norm, name='c2')
         self.take_optimization_step(self.actor_optimizer,
                                     self.actor_local,
                                     actor_loss,
-                                    self.gradient_clipping_norm)
+                                    self.gradient_clipping_norm, name='a')
 
         self.soft_update_of_target_network(self.critic_local_1,
                                            self.critic_target_1,
@@ -366,7 +378,7 @@ class SAC:
             self.step()
 
     def print_summary_of_latest_evaluation_episode(self):
-        fig, (ax1, ax2) = plt.subplots(2, 1)
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
         env = self.environment
         ax1.plot(np.arange(len(env.prices)), env.prices, linewidth=0.3, color='black')
 
@@ -376,9 +388,13 @@ class SAC:
             ax1.plot(np.arange(t0, t1 + 1), env.prices[t0:t1 + 1], color='red', linewidth=0.4)
 
         if len(env.buy_pts) > 0:
-            ax1.scatter(*zip(*env.buy_pts), s=4, color='green')
+            bpts_t, bpts_x = tuple(zip(*env.buy_pts))
+            bpts_x = tuple(x.item() for x in bpts_x)
+            ax1.scatter(bpts_t, bpts_x, s=4, color='green')
         if len(env.sell_pts) > 0:
-            ax1.scatter(*zip(*env.sell_pts), s=4, color='red')
+            spts_t, spts_x = tuple(zip(*env.sell_pts))
+            spts_x = tuple(x.item() for x in spts_x)
+            ax1.scatter(spts_t, spts_x, s=4, color='red')
 
         if self.episode_number == 0:
             self.avg_score = self.total_episode_score_so_far
@@ -390,13 +406,17 @@ class SAC:
         ax2.plot(np.arange(len(self.score_hist)), self.score_hist, linewidth=0.2)
         ax2.plot(np.arange(len(self.score_hist)), self.avg_score_hist, linewidth=0.5)
 
+        ax3.plot(np.arange(min(200, len(self.score_hist))), self.score_hist[-200:], linewidth=0.2)
+        ax3.plot(np.arange(min(200, len(self.score_hist))), self.avg_score_hist[-200:], linewidth=0.5)
+
         plt.show()
         print('-' * 20)
         print('Episode {}, score {} '.format(self.episode_number, self.total_episode_score_so_far))
         print('Buy: {}, sell: {}, net: {}'.format(len(env.buy_pts), len(env.sell_pts), env.net))
+        print('s: {}, n: {}, l: {}'.format(env.raw_short_count, env.raw_neutral_count, env.raw_long_count))
         print(f'alpha: {self.alpha.item()}')
-#        print(
         print('-' * 20)
+        print(f'Run: {env.idx}')
 
     def soft_update_of_target_network(self, local_model, target_model, tau):
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
@@ -416,4 +436,4 @@ def create_actor_distribution(action_types, actor_output, action_size):
 
 agent = SAC()
 
-agent.run_n_episodes(1000)
+agent.run_n_episodes(10000000)

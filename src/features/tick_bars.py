@@ -12,12 +12,11 @@ import numpy as np
 
 import settings
 
-NB_TICKS = 20
+NB_TICKS = 5
 
-IB_DB_PATH = settings.DATA_DIRECTORY / (settings.IB_DATABASE_NAME + '-2')
+IB_DB_PATH = settings.DATA_DIRECTORY / (settings.IB_DATABASE_NAME)
 
 end_day = datetime.now().date()
-end_day -= timedelta(days=1)
 
 end_day = end_day.strftime('%Y-%m-%d')
 
@@ -65,7 +64,7 @@ SELECT DISTINCT(symbol) from ib_trade_reports WHERE day=? ORDER BY symbol;
     for symbol in symbols:
         rows = db.execute('''
 SELECT timestamp, price, size FROM ib_trade_reports
-WHERE day=? AND symbol=? AND timestamp!=0 ORDER BY id;''', (day, symbol)).fetchall()
+WHERE day=? AND symbol=? AND timestamp!=0 AND price!=0 AND size!=0 ORDER BY id;''', (day, symbol)).fetchall()
 
         if len(rows) == 0:
             print(symbol)
