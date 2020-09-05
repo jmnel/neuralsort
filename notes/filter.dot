@@ -1,0 +1,206 @@
+digraph G {
+graph[rankdir=TB]
+
+    node [shape=box]
+    edge [fontsize=8]
+
+//    n1 [shape=box, label="tickers"]
+//    n2 [shape=box, label="end with '_'"]
+//    n3 [shape=box, label="is test"]
+//    n4 [shape=box, label="exchange"]
+
+//    n1 -> n2
+//    n2 -> n4 [label="false"]
+
+//    discard [shape=box, label="discard"]
+
+//    n2 -> discard [label="true"]
+
+//    n3 [shape=box, label="NASDAQ\ntest ticker"]
+
+    tickers [label="tickers"]
+
+    trail_underscore [label="ends with\n_"]
+
+    tickers -> trail_underscore
+
+    exchange [label="exchange"]
+
+    discard [label="discard"]
+
+    trail_underscore -> discard [label="true"]
+    trail_underscore -> exchange [label="false"]
+
+
+    subgraph cluster_nyse {
+        style=filled;
+//        color=white;
+        node [style=filled,fillcolor=white];
+        label="NYSE";
+
+        nyse_test [label="test\nticker"]
+        nyse_dot [label="dot\nconvention"]
+        nyse_under [label="underscore\nconvention"]
+
+        nyse_test -> nyse_dot [label="false"]
+        nyse_test -> nyse_under [label="false"]
+
+        nyse_test2 [label="root test\nticker"]
+
+        nyse_dot -> nyse_test2 [label="true"]
+        nyse_under -> nyse_test2 [label="true"]
+        
+        nyse_5 [label="5 letters"]
+
+        nyse_test -> nyse_5 [label="false"]
+
+        nyse_postfix [label="postfix\nmatch"]
+
+        nyse_test2 -> nyse_postfix [label="false"]
+        nyse_5 -> nyse_postfix [label="true"]
+
+        nyse_regex [label="regex\nmatch"]
+
+        nyse_5 -> nyse_regex [label=""]
+        nyse_postfix -> nyse_regex [label="false"]
+
+//        nyse_postfix [label="postfix\nmatch"]
+//        nyse_test2 -> nyse_postfix [label="false"]
+
+//        nyse_under [label="underscore\nconvention"]
+//        nyse_postfix -> nyse_under [label="false"]
+
+//        nyse_dot -> nyse_under [label="false"]
+
+//        nyse_test3 [label="root test\nticker"]
+//        nyse_under -> nyse_test3 [label="true"]
+
+        
+    }
+    nyse_test -> discard [label="true"];
+    nyse_test2 -> discard [label="true"];
+
+    nyse_postfix -> not_common [label="true"]
+    nyse_regex -> not_common [label="true"]
+    nyse_regex -> common [label="false"]
+
+//    nyse_test2 -> discard [label="true"];
+//    nyse_test3 -> discard [label="true"];
+
+//    nyse_postfix -> not_common [label="true"]
+
+    subgraph cluster_nasdaq {
+        style=filled;
+//        color=white;
+        node [style=filled,fillcolor=white];
+        label="NASDAQ";
+
+        nasdaq_test [label="test\nticker"]
+        nasdaq_5 [label="5 letters"]
+        nasdaq_postfix [label="postfix\nmatch"]
+        nasdaq_regex [label="regex\nmatch"]
+
+        nasdaq_exception [label="rule\nexception"]
+
+        nasdaq_test -> nasdaq_5 [label="false"]
+        nasdaq_5 -> nasdaq_postfix [label="true"]
+
+        nasdaq_postfix -> nasdaq_exception [label="true"]
+//        nasdaq_exception -> nasdaq_regex [label=""]
+
+        nasdaq_5 -> nasdaq_regex [label="false"]
+
+        nasdaq_postfix -> nasdaq_regex [label="false"]
+    }
+
+    nasdaq_exception -> common [label="true"]
+    nasdaq_exception -> not_common [label="false"]
+
+    nasdaq_regex -> not_common [label="true"]
+    nasdaq_regex -> common [label="false"]
+    nasdaq_test -> discard [label="true"]
+
+    exchange -> discard [label="NYSE Arca"]
+
+//    nasdaq_postfix -> not_common [label="true"]
+
+    common [label="common\nstock"]
+    not_common [label="not common\nstock"]
+
+    exchange -> nyse_test [label="NYSE"]
+    exchange -> nyse_test [label="NYSE\nMKT"]
+    exchange -> nasdaq_test [label="NASDAQ"]
+
+//    subgraph nyse {
+//        b1 -> b2
+//    }
+
+    
+
+//    n3 -> a1
+
+//    n4 -> n3 [label="NASDAQ"]
+
+//    n5 [shape=box, label="5 letters"]
+//    n3 -> n5 [label="false"]
+//    n3 -> discard [label="true"]
+
+
+//    noncommon [shape=box, label="not\ncommon"]
+
+//    n6 [shape=box, label="postfix\nmatch"]
+
+//    n5 -> n6 [label="true"]
+
+//    n6 -> noncommon [label="true"]
+
+//    regex_match_nasdaq [shape=box, label="regex\nmatch"]
+
+//    n6 -> regex_match_nasdaq [label="false"]
+//    n5 -> regex_match_nasdaq [label="false"]
+
+//    common_stock [shape=box, label="common\nstock"]
+
+//    regex_match_nasdaq -> common_stock [label="false"]
+//    regex_match_nasdaq -> noncommon [label="true"]
+
+//    nyse_test [shape=box, label="NYSE\ntest ticker"]
+
+//    n4 -> nyse_test [label="NYSE or\nNYSE MKT"]
+
+//    nyse_test -> discard [label="true"]
+
+//    n4 -> discard [label="NYSE Arca"]
+
+//    nyse_dot_notation [shape="box", label="dot\nnotation"]
+
+//    nyse_test -> nyse_dot_notation [label="false"]
+
+//    nyse_test2 [shape="box", label="root in\nNYSE\ntest tickers"]
+
+//    nyse_dot_notation -> nyse_test2 [label="true"]
+
+//    nyse_test2 -> discard [label="true"]
+
+//    nyse_postfix [shape="box", label="postfix\nmatch"]
+
+//    nyse_test2 -> nyse_postfix [label="false"]
+
+//    nyse_postfix -> noncommon [label="true"]
+
+//    nyse_underscore [shape="box", label="underscore\nnotation"]
+
+//    nyse_postfix -> nyse_underscore [label="false"]
+//    nyse_dot_notation -> nyse_underscore [label="false"]
+
+//    nyse_test3 [shape="box", label="root in\nNYSE\ntest tickers"]
+//    nyse_postfix2 [shape="box", label="postfix\nmatch"]
+
+//    nyse_underscore -> nyse_test3 [label="true"]
+//    nyse_underscore -> nyse_postfix2 [label="true"]
+
+//    nyse_test3 -> discard [label="true"]
+//    nyse_postfix2 -> noncommon [label="true"]
+
+
+}

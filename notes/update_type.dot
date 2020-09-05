@@ -1,0 +1,68 @@
+digraph G {
+
+ratio = 0.8
+//splines=ortho
+
+rankdir=LR
+
+    subgraph cluster_update_type {
+        style=filled;
+//        color=white;
+        node [shape=diamond,style=filled,fillcolor=white];
+
+        db_exists [label="database\nexists"]
+        json_exists [label="JSON\nexists"]
+        json_valid [label="JSON\nvalid"]
+        has_update [label="has past\nupdates"]
+        version_bump [label="version\nbump"]
+        last_update [shape=box, label="determine last\nupdate date"]
+        download_patch [shape=box, label="download\npatch"]
+        days_behind [label="days\nbehind"]
+
+        db_exists -> json_exists [xlabel="Yes"]
+        json_exists -> json_valid [xlabel="Yes"]
+        json_valid -> has_update [xlabel="Yes"]
+        has_update -> version_bump [xlabel="Yes"]
+        version_bump -> last_update [xlabel="No"]
+        last_update -> download_patch
+        download_patch -> days_behind
+
+        complete_junction [shape=diamond,label=""]
+        db_exists -> complete_junction [xlabel="No"]
+        json_exists -> complete_junction [xlabel="No"]
+        json_valid -> complete_junction [xlabel="No"]
+        has_update -> complete_junction [xlabel="No"]
+        version_bump -> complete_junction [xlabel="Yes"]
+    }
+
+    start [shape=point,width=0.2]
+    start_note [shape=note,margin=0.2,label="Determine\nupdate type."]
+    start_note -> start [style=dashed, arrowhead=none]
+
+    start -> db_exists
+
+
+    end0 [shape=doublecircle, style=filled, color=black, width=0.2, label=""]
+    end1 [shape=doublecircle, style=filled, color=black, width=0.2, label=""]
+    end2 [shape=doublecircle, style=filled, color=black, width=0.2, label=""]
+
+    end_note0 [shape=note, margin=0.2, label="No update\navailable."]
+    end_note1 [shape=note, margin=0.2, label="Partial update\navailable."]
+    end_note2 [shape=note, margin=0.2, label="Complete update\nrequired."]
+
+    end_note0 -> end0 [style=dashed, arrowhead=none]
+    end_note1 -> end1 [style=dashed, arrowhead=none]
+    end_note2 -> end2 [style=dashed, arrowhead=none]
+
+    days_behind -> end0 [xlabel="0"]
+    days_behind -> end1 [xlabel="1"]
+    days_behind -> end2 [xlabel="≥2"]
+
+    complete_junction -> end2
+//    db_exists -> end2 [label="No"]
+//    json_exists -> end2 [label="No"]
+//    json_valid -> end2 [label="No"]
+//    has_update -> end2 [label="No"]
+//    version_bump -> end2 [label="Yes"]
+
+}

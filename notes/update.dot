@@ -1,0 +1,48 @@
+digraph G {
+
+ratio = compress
+//splines=ortho
+
+rankdir=LR
+
+    subgraph cluster_complete {
+        style=filled;
+//        color=white;
+        node [shape=diamond,style=filled,fillcolor=white];
+
+        determine [shape=box, label="determine\nupdate type"]
+        update_type [shape=diamond, label="update\ntype"]
+        partial [shape=box, label="Partial\ndatabase patch"]
+        complete [shape=box, label="Complete\ndatabase rebuild"]
+        meta [shape=box, label="generate\nmetadata"]
+        purge [shape=box, label="purge\nempty"]
+        vix [shape=box, label="import\n$VIX"]
+        spx [shape=box, label="import\n$SPX"]
+
+        determine -> update_type
+        update_type -> complete [label="complete"]
+        update_type -> partial [label="partial"]
+
+        complete -> meta
+        partial -> meta
+
+        meta -> purge -> vix -> spx
+
+    }
+
+    start [shape=point,width=0.2]
+    start_note [shape=note,margin=0.2,label="Update\nrequested."]
+    start_note -> start [style=dashed, arrowhead=none]
+
+    start -> determine
+
+    end [shape=doublecircle, style=filled, color=black, width=0.2, label=""]
+
+    end_note [shape=note, margin=0.2, label="Database is now up to date\nwith most recent info."]
+    end_note -> end [style=dashed, arrowhead=none]
+
+    update_type -> end [label="none"]
+    spx -> end
+
+
+}

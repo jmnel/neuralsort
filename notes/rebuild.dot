@@ -1,0 +1,25 @@
+digraph G {
+
+ratio = compress
+
+rankdir=TB
+
+    subgraph cluster_update_type {
+        style=filled;
+//        color=white;
+        node [shape=diamond,style=filled,fillcolor=white];
+
+        delete_db [shape=box,label="Delete\ndatabase"]
+        init_db [shape=box,label="Init.\ndatabase"]
+
+        delete_db -> init_db
+    }
+
+    start [shape=point,width=0.2]
+    start_note [shape=note,margin=0.2,label="Complete rebuild\nrequested."]
+    start_note -> start [style=dashed, arrowhead=none]
+
+    start -> delete_db
+
+
+}

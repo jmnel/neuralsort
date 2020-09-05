@@ -1,0 +1,39 @@
+digraph G {
+
+    graph [nodesep=0.5,ranksep=2]
+    splines=ortho
+
+    rankdir=LR
+
+    node [shape=box]
+    env [shape=box,style=rounded,width=2,height=1.0,label="Environment"]
+
+    subgraph cluster_agent {
+        margin=30
+        label="Agent"
+        style="filled,rounded"
+        node [style=filled,fillcolor=white]
+        actor [width=2,height=1,label="Actor"]
+        critic [width=2,height=1,label="Critic"]
+
+        critic -> actor [xlabel="r̂(t) : TD error"]
+    
+        reward_hidden [shape=point,width=0.1,height=0.01,style=invis]
+
+        reward_hidden -> critic [xlabel="r(t) : reward"]
+    }
+
+//    env -> critic
+//    env -> actor
+
+//    j [shape=point,width=0.01,height=0.01]
+
+//    env -> j [arrowhead=none]
+//    j -> critic 
+//    j -> actor 
+
+    env -> {actor, critic }
+
+    actor -> env [xlabel="U(t) : action"]
+
+}

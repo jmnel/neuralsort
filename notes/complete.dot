@@ -1,0 +1,44 @@
+digraph G {
+
+ratio = 0.8
+//splines=ortho
+
+rankdir=LR
+
+    subgraph cluster_complete {
+        style=filled;
+//        color=white;
+        node [shape=diamond,style=filled,fillcolor=white];
+
+        delete [shape=box, label="delete\ndatabase"]
+        delete_note [shape=note, label="It is faster to delete sqlite3\ndatabase than drop table\nor delete rows."]
+        delete -> delete_note [style=dashed,arrowhead=none]
+
+
+        init [shape=box, label="initialize\ndatabase"]
+        meta [shape=box, label="get\nmetadata"]
+        bulk [shape=box, label="bulk\ndownload"]
+        unzip [shape=box, label="unzip\nCSV"]
+        write [shape=box, label="write to\ndatabase"]
+        record [shape=box, label="record\nupdate info\nJSON"]
+
+        delete -> init -> meta -> bulk -> unzip -> write -> record
+    }
+
+    start [shape=point,width=0.2]
+    start_note [shape=note,margin=0.2,label="Complete update\nrequested."]
+    start_note -> start [style=dashed, arrowhead=none]
+
+    start -> delete
+
+    record -> end
+
+
+    end [shape=doublecircle, style=filled, color=black, width=0.2, label=""]
+
+    end_note [shape=note, margin=0.2, label="Bulk EOD\nnow stored in database.\nUpdate info stored in JSON."]
+
+    end_note -> end [style=dashed, arrowhead=none]
+
+
+}

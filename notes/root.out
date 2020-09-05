@@ -1,0 +1,27 @@
+\BOOKMARK [0][-]{chapter.1}{Data collection}{}% 1
+\BOOKMARK [1][-]{section.1.1}{Downloading metadata\205getting list of symbols}{chapter.1}% 2
+\BOOKMARK [1][-]{section.1.2}{Filtering list of symbols}{chapter.1}% 3
+\BOOKMARK [2][-]{subsection.1.2.1}{Exchanges as denoted in Quandl EOD}{section.1.2}% 4
+\BOOKMARK [2][-]{subsection.1.2.2}{NASDAQ symbol convention}{section.1.2}% 5
+\BOOKMARK [2][-]{subsection.1.2.3}{NYSE symbol convention}{section.1.2}% 6
+\BOOKMARK [2][-]{subsection.1.2.4}{Test tickers}{section.1.2}% 7
+\BOOKMARK [1][-]{section.1.3}{Indices as additional features}{chapter.1}% 8
+\BOOKMARK [2][-]{subsection.1.3.1}{S\046P500 market index}{section.1.3}% 9
+\BOOKMARK [2][-]{subsection.1.3.2}{VIX market volatillity index}{section.1.3}% 10
+\BOOKMARK [1][-]{section.1.4}{IB symbol lookup}{chapter.1}% 11
+\BOOKMARK [1][-]{section.1.5}{Incremental database updates}{chapter.1}% 12
+\BOOKMARK [2][-]{subsection.1.5.1}{Determining update type}{section.1.5}% 13
+\BOOKMARK [2][-]{subsection.1.5.2}{Complete database rebuild}{section.1.5}% 14
+\BOOKMARK [2][-]{subsection.1.5.3}{Partial database patch}{section.1.5}% 15
+\BOOKMARK [0][-]{chapter.2}{Realtime strategy}{}% 16
+\BOOKMARK [1][-]{section.2.1}{Feature engineering}{chapter.2}% 17
+\BOOKMARK [2][-]{subsection.2.1.1}{Technical indicators}{section.2.1}% 18
+\BOOKMARK [2][-]{subsection.2.1.2}{Probability distribution fitting}{section.2.1}% 19
+\BOOKMARK [2][-]{subsection.2.1.3}{Heavy-tailed process}{section.2.1}% 20
+\BOOKMARK [1][-]{section.2.2}{Naive strategy}{chapter.2}% 21
+\BOOKMARK [0][-]{chapter.3}{Reinforcement learning}{}% 22
+\BOOKMARK [1][-]{section.3.1}{Markov Decision Process}{chapter.3}% 23
+\BOOKMARK [1][-]{section.3.2}{REINFORCE}{chapter.3}% 24
+\BOOKMARK [0][-]{chapter.4}{Actor Critic}{}% 25
+\BOOKMARK [0][-]{chapter.5}{Discrete Soft Actor Critic}{}% 26
+\BOOKMARK [0][-]{chapter.6}{Planned future work}{}% 27
