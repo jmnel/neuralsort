@@ -184,13 +184,13 @@ class WaveNetNN(nn.Module):
                          dilation_func=self.wavenet_dilate)
 
         # Reshape the output.
-        [n, c, l] = x.shape
+#        [n, c, l] = x.shape
 
-        t = self.output_length
-        x = x[:, :, -t:]
-        x = x.transpose(1, 2).contiguous()
+#        t = self.output_length
+#        x = x[:, :, -t:]
+#        x = x.transpose(1, 2).contiguous()
 
-        x = x.view(n * t, c)
+#        x = x.view(n * t, c)
 
         return x
 
