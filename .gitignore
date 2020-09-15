@@ -10,3 +10,4 @@ src/visualize/plots.zip
 src/visualize/plots2
 src/rl/__pycache__
 src/features/plots/
+src/predict/__pycache__

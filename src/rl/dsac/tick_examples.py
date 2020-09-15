@@ -10,7 +10,7 @@ from torch.utils.data.dataloader import DataLoader
 
 import settings
 
-IEX_PATH = settings.DATA_DIRECTORY / settings.IEX_DATABASE_NAME
+IEX_PATH = settings.DATA_DIRECTORY / settings.IEX_SMALL_NAME
 
 
 class TickExamples(Dataset):

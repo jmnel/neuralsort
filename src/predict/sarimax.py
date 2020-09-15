@@ -29,6 +29,8 @@ seq_len = labels[2].item()
 price = price[:seq_len]
 PREDICT_LENGTH = 100
 
+SPLIT = (0.7, 0.3)
+
 # plt.plot(price)
 # plt.show()
 

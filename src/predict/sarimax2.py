@@ -21,7 +21,7 @@ import settings
 from rl.dsac.tick_examples import TickExamples
 
 NUM_EXAMPLES = 10
-PRED_LEN = 200
+SPLIT = (0.7, 0.3)
 
 loader = DataLoader(TickExamples(mode='train', num_examples=NUM_EXAMPLES),
                     batch_size=1,
@@ -31,43 +31,32 @@ labels, ticks, mask = next(iter(loader))
 seq_len = labels[2][0]
 
 price = ticks[0, :seq_len, 1].numpy()
-
 price = np.log(price)
 
+price = price[:1000]
+
+# Divide into train and test sets.
+test_start = int(seq_len * (SPLIT[0] / sum(SPLIT)) + 0.5)
+test_end = seq_len - 1
+
+x = price.reshape(-1, 1)
+#y_train = price[1:test_start]
+#x_test = price[test_start:-1]
+#y_test = price[test_start + 1:]
+
+#x_train = x_train.reshape(-1, 1)
+#y_train = y_train.reshape(-1, 1)
+#x_test = x_test.reshape(-1, 1)
+#y_test = y_test.reshape(-1, 1)
+
+# Scale input; fit on training set.
 sc_in = MinMaxScaler(feature_range=(0, 1))
 
-price = price.reshape(price.shape[0], 1)
-price = sc_in.fit_transform(price)
-#price = price.flatten()
 
-# mu = np.mean(price)
-# price -= mu
-# std = np.std(price)
-# price /= std
+sc_in.fit(x[:200])
+x = sc_in.transform(x)
 
-# log_returns = np.diff(np.log(price))
-
-TEST_SIZE = 1500
-
-x_train = price[:-TEST_SIZE - 1, :]
-y_train = price[1:-TEST_SIZE, :]
-x_test = price[-TEST_SIZE - 1:, :]
-y_test = price[-TEST_SIZE - 1:, :]
-
-# print(x_test.shape)
-# print(y_test.shape)
-
-#assert len(x_test) + len(x_train) == seq_len
-# exit()
-
-# x = log_returns[:seq_len - 1 - PRED_LEN]
-# y_hat = log_returns[seq_len - 1 - PRED_LEN:]
-
-# x = price[:-PRED_LEN]
-# y_hat = price[-PRED_LEN:]
-
-# step_wise = auto_arima(y_train,
-#                       exogenous=x_train,
+# step_wise = auto_arima(x[:200],
 #                       start_p=1, start_q=1,
 #                       max_p=7, max_q=7,
 #                       d=1, max_d=7,
@@ -76,26 +65,49 @@ y_test = price[-TEST_SIZE - 1:, :]
 #                       supress_warnings=True,
 #                       stepwise=True)
 
-x_train = x_train.flatten()
-y_train = y_train.flatten()
-x_test = x_test.flatten()
-y_test = y_test.flatten()
-model = SARIMAX(y_train,
-                exog=x_train,
-                order=(1, 0, 3),
-                enforce_invertibility=False,
-                enforce_stationarity=False)
+x = x.flatten()
+
+plt.plot(np.arange(len(x)), x, linewidth=0.6)
+
+past_params = None
+max_iterations = 200
+method = 'statespace'
+for t in range(200, len(x) - 1):
+    x_train = x[:t]
+    model = ARIMA(x_train,
+                  order=(1, 1, 2),
+                  #                    order=(1, 1, 2),
+                  enforce_invertibility=False,
+                  enforce_stationarity=False)
+    fit_model = model.fit(method=method)
+#    if past_params is not None:
+#        fit_model = model.fit()
+#    else:
+#        fit_model = model.fit()
+
+    past_params = fit_model.params
+
+    if t % 100 == 0:
+        print(f't={t}')
+
+    forecast = fit_model.forecast(10)
+    plt.plot(np.arange(10) + t, forecast, linewidth=0.5)
 
 
-fit = model.fit()
-
-forecast = fit.forecast(steps=TEST_SIZE, exog=x_test[:-1])
-
-plt.plot(np.arange(len(y_train)), y_train)
-plt.plot(np.arange(len(y_test)) + len(y_train), y_test)
-plt.plot(np.arange(len(y_test) - 1) + len(y_train), forecast, linewidth=2.0)
-pprint(forecast)
 plt.show()
+#fit = model.fit()
+
+
+#test_size = len(x_test)
+#forecast = fit.forecast(steps=test_size)
+
+#plt.plot(np.arange(len(y_train)), y_train, linewidth=0.6)
+#plt.plot(np.arange(len(y_test)) + len(y_train), y_test, linewidth=0.6)
+#plt.plot(np.arange(len(y_test)) + len(y_train), forecast, linewidth=0.6)
+# pprint(len(forecast))
+# plt.show()
+
+#pprint(x_test[1:] - y_test[0:-1])
 
 # d = 1
 # p = 1
