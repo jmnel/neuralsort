@@ -28,9 +28,9 @@ EPOCHS = 10000
 BATCH_SIZE = 50
 #BATCH_SIZE = 10
 NUM_EXAMPLES = 1000
-HIDDEN = 16
+HIDDEN = 8
 PADDING = 0
-LR = 2e-3
+LR = 1e-2
 LOSS_2 = 1
 LOSS_1 = 1
 LOSS_3 = 1
@@ -47,8 +47,7 @@ ALPHA = 0.5
 L = 5
 SEQ_LEN = 255
 DROPOUT = 0.0
-SE_RATIO = 4
-USE_SKIP = False
+SE_RATIO = 2
 
 
 def calc_ema(x, alpha, l):
@@ -87,14 +86,12 @@ class ResidualBlock(nn.Module):
         self.conv_layers = nn.ModuleList()
 
         self.norm = nn.BatchNorm2d(in_features)
-        self.se = nn.ModuleList()
 
         for i in range(num_layers):
             f_in = in_features
             f_out = f_in
             self.conv_layers.append(nn.Conv2d(f_in, f_out, kernel_size=7, padding=3 *
                                               DILATION, bias=BIAS, dilation=DILATION))
-            self.se.append(SeBlock2d(in_features, ratio=SE_RATIO))
 
         self.pool_indices = None
 
@@ -105,8 +102,6 @@ class ResidualBlock(nn.Module):
             s1 = x.shape
             x = self.conv_layers[i](x)
             x = ACT(x)
-            x_se = self.se[i](x)
-            x = x + x_se
 #            print(f'{i} : {s1} -> {x.shape}')
         x = x + x_res
         x = self.norm(x)
@@ -124,7 +119,6 @@ class DeResidualBlock(nn.Module):
 
         self.dconv_layers = nn.ModuleList()
         self.norm = nn.BatchNorm2d(in_features)
-        self.se = nn.ModuleList()
 
         for i in range(num_layers):
             f_in = in_features
@@ -132,7 +126,6 @@ class DeResidualBlock(nn.Module):
 #            self.dconv_layers.append(nn.Conv2d(f_in, f_out, kernel_size=7, padding=3, bias=BIAS))
             self.dconv_layers.append(nn.ConvTranspose2d(f_in, f_out, kernel_size=7,
                                                         padding=3 * DILATION, bias=BIAS, dilation=DILATION))
-            self.se.append(SeBlock2d(in_features, ratio=SE_RATIO))
 
     def forward(self, x, pool_indices):
 
@@ -141,8 +134,6 @@ class DeResidualBlock(nn.Module):
         for i in range(self.num_layers):
             x = self.dconv_layers[i](x)
             x = ACT(x)
-            x_se = self.se[i](x)
-            x = x + x_se
         x = x + x_res
         x = self.norm(x)
         return x
@@ -160,8 +151,7 @@ class Model(nn.Module):
         self.conv_in = nn.Conv2d(2, CHANNELS, kernel_size=1, bias=BIAS, padding=0)
         self.conv_out = nn.Conv2d(CHANNELS, 2, kernel_size=1, bias=BIAS, padding=0)
 
-        self.se_in = SeBlock2d(CHANNELS, ratio=SE_RATIO)
-        self.se_out = SeBlock2d(CHANNELS, ratio=SE_RATIO)
+        self.se_in = SeBlock2d(CHANNELS, 8, ratio=SE_RATIO)
 
         self.res_blocks_in = nn.ModuleList()
         for i in range(RESIDUAL_BLOCKS):
@@ -174,16 +164,17 @@ class Model(nn.Module):
         self.blur.weight[:, :, :, :] = 1 / 5
         self.blur.weight.detach_()
 
-#        self.skip_dropouts = nn.ModuleList(nn.Dropout2d(p=DROPOUT) for _ in range(RESIDUAL_BLOCKS))
+        self.skip_dropouts = nn.ModuleList(nn.Dropout2d(p=DROPOUT) for _ in range(RESIDUAL_BLOCKS))
 #        print(self.blur.weight)
 #        print(self.blur.weight)
 #        for param in self.blur.parameters():
 #            param.requires_grad = False
 
-        self.fc_1 = nn.Linear(CHANNELS * (128 // (2**RESIDUAL_BLOCKS))**2, HIDDEN * 2)
-        self.fc_2 = nn.Linear(HIDDEN * 2, HIDDEN)
-        self.fc_3 = nn.Linear(HIDDEN, HIDDEN * 2)
-        self.fc_4 = nn.Linear(HIDDEN * 2, CHANNELS * (128 // (2**RESIDUAL_BLOCKS))**2)
+
+#        self.fc_1 = nn.Linear(32 * 64**2, HIDDEN * 2)
+#        self.fc_2 = nn.Linear(HIDDEN * 2, HIDDEN)
+#        self.fc_3 = nn.Linear(HIDDEN, HIDDEN * 2)
+#        self.fc_4 = nn.Linear(HIDDEN * 2, 32 * 64**2)
 
         self.apply(weights_init_)
 
@@ -226,52 +217,46 @@ class Model(nn.Module):
 #        block = torch.randint(BLOCK_MIN, BLOCK_MAX, (1,))
         block = BLOCK_MIN
         for i in range(BATCH_SIZE):
-            pass
             #            x[i, 0, block:, :] = torch.randn_like(x[i, 0, block[i]:, :]) * 1e-3
             #            x[i, 0, :, block:] = torch.randn_like(x[i, 0, :, block[i]:]) * 1e-3
-#            x[i, 0, block:, :] = 0
-#            x[i, 0, :, block:] = 0
-#            x[i, 1, block:, :] = 0
-#            x[i, 1, :, block:] = 0
+            x[i, 0, block:, :] = 0
+            x[i, 0, :, block:] = 0
+            x[i, 1, block:, :] = 0
+            x[i, 1, :, block:] = 0
 
         x = self.conv_in(x)
         x = F.relu(x)
 
         x_se = self.se_in(x)
-        x = x + x_se
+        print(x_se.shape)
 
         pool_indices = list()
-#        skip = list()
+        skip = list()
         for i in range(RESIDUAL_BLOCKS):
             #            s1 = x.shape
             x, idx = self.res_blocks_in[i](x)
 #            print(f'{i} : {s1} -> {x.shape}')
             pool_indices.insert(0, idx)
-#            x_skip = x
-#            skip.append(x_skip)
+            x_skip = x
+            skip.append(x_skip)
 
 #        print(f'pre hiddne={x.shape}')
-#        print(f'{128//(2**RESIDUAL_BLOCKS)}')
-        x = torch.flatten(x, start_dim=1)
+#        x = torch.flatten(x, start_dim=1)
 
-        x = self.fc_1(x)
-        x = ACT(x)
-        x = self.fc_2(x)
-        x = ACT(x)
-
-        x = F.dropout(x, p=0.5)
+#        x = self.fc_1(x)
+#        x = ACT(x)
+#        x = self.fc_2(x)
 
 #        x = torch.zeros_like(x)
 
-        x = self.fc_3(x)
-        x = ACT(x)
-        x = self.fc_4(x)
-        x = ACT(x)
+#        x = self.fc_3(x)
+#        x = ACT(x)
+#        x = self.fc_4(x)
 
-        x = x.reshape((BATCH_SIZE, CHANNELS, 128 // (2**RESIDUAL_BLOCKS), 128 // (2**RESIDUAL_BLOCKS)))
+#        x = x.reshape((BATCH_SIZE, 32, 64, 64))
 
         for i in range(RESIDUAL_BLOCKS):
-            #            x = x + self.skip_dropouts[i](skip[-i - 1])
+            x = x + self.skip_dropouts[i](skip[-i - 1])
             x = self.res_blocks_out[i](x, pool_indices[i])
 
         x = self.conv_out(x)
@@ -338,13 +323,15 @@ def train(model, loader: DataLoader, optimizer, epoch):
 #        m[0, 0, 249:, :] = 1.0
 #        m[0, 0, :, 249:] = 1.0
 
-#        y_down_1 = model.blur(y[:, 0:1])
-#        y_down_2 = model.blur(y[:, 1:2])
-#        gasf_down = model.blur(gasf)
-#        gadf_down = model.blur(gadf)
+        y_down_1 = model.blur(y[:, 0:1])
+        y_down_2 = model.blur(y[:, 1:2])
+        gasf_down = model.blur(gasf)
+        gadf_down = model.blur(gadf)
+#        print(y_down_1.shape)
+#        exit()
 
-#        loss_1 = F.mse_loss(y_down_1, gasf_down) + F.mse_loss(y_down_2, gadf_down)
-        loss_1 = F.mse_loss(y[:, :1], gasf) + F.mse_loss(y[:, 1:2], gadf)
+        loss_1 = F.mse_loss(y_down_1, gasf_down) + F.mse_loss(y_down_2, gadf_down)
+#        loss_1 = F.mse_loss(y[:, :1], gasf) + F.mse_loss(y[:, 1:2], gadf)
 #        loss_1 = torch.mean(F.mse_loss(y, gram, reduction='none') * m)
 #        loss_2 = F.mse_loss(x_rcst, x[:, 0, :])
 #        loss_3 = F.mse_loss(torch.cumsum(x_rcst, dim=-1), torch.cumsum(x[:, 0, :], dim=-1))
@@ -405,14 +392,12 @@ def validate(model, loader, epoch):
 
             y, gasf, gadf, scale_min, scale_max, x_rcst, block = model(x)
 
-            loss_1 = F.mse_loss(y[:, :1], gasf) + F.mse_loss(y[:, 1:2], gadf)
+            y_down_1 = model.blur(y[:, 0:1])
+            y_down_2 = model.blur(y[:, 1:2])
+            gasf_down = model.blur(gasf)
+            gadf_down = model.blur(gadf)
 
-#            y_down_1 = model.blur(y[:, 0:1])
-#            y_down_2 = model.blur(y[:, 1:2])
-#            gasf_down = model.blur(gasf)
-#            gadf_down = model.blur(gadf)
-
-#            loss_1 = F.mse_loss(y_down_1, gasf_down) + F.mse_loss(y_down_2, gadf_down)
+            loss_1 = F.mse_loss(y_down_1, gasf_down) + F.mse_loss(y_down_2, gadf_down)
 
 #            y, gram, scale_min, scale_max, x_rcst, block = model(x)
 
@@ -498,12 +483,12 @@ def main():
         ax4.add_patch(rect4)
 
         ax5 = plt.subplot(425)
-        ax5.plot(train_losses[-50:])
-        ax5.plot(validate_losses[-50:])
+        ax5.plot(train_losses[-100:])
+        ax5.plot(validate_losses[-100:])
 
         ax6 = plt.subplot(426)
-        ax6.plot(running_train_loss_hist[-50:])
-        ax6.plot(running_valid_loss_hist[-50:])
+        ax6.plot(running_train_loss_hist)
+        ax6.plot(running_valid_loss_hist)
 
         ax7 = plt.subplot(427)
         ax7.plot(plt_x)

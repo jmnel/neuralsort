@@ -20,7 +20,7 @@ import settings
 IB_DB_PATH = settings.DATA_DIRECTORY / (settings.IB_DATABASE_NAME)
 
 end_day = datetime.now().date()
-end_day -= timedelta(days=1)
+#end_day -= timedelta(days=1)
 
 end_day = end_day.strftime('%Y-%m-%d')
 

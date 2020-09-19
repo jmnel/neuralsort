@@ -35,6 +35,17 @@ CREATE TABLE iex_days(
     date DATE PRIMARY KEY,
     message_count UNSIGNED_INTEGER DEFAULT 0);
 ''')
+#    db_2.execute('''
+# CREATE TABLE iex_trade_reports_3000(
+#    id INTEGER PRIMARY KEY,
+#    day DATE,
+#    timestamp UNSIGNED BIG INT,
+#    symbol CHAR(16),
+#    price fLOAT,
+#    size FLOAT);''')
+#    db_2.execute('''
+# CREATE TABLE iex_meta_3000(
+#    id INTEGER
 
     # Create symbols meta table.
     db.execute('''
@@ -172,7 +183,7 @@ VALUES(?, ?, ?, ?);
 
 
 def main():
-    with sqlite3.connect(settings.DATA_DIRECTORY / (settings.IEX_DATABASE_NAME + '2')) as db:
+    with sqlite3.connect(settings.DATA_DIRECTORY / (settings.IEX_DATABASE_NAME + '3')) as db:
         prepare_database(db)
         symbols_meta = get_quandl_meta(db)
         parse_csv(db, symbols_meta)
