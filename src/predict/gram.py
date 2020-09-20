@@ -226,13 +226,13 @@ class Model(nn.Module):
 #        block = torch.randint(BLOCK_MIN, BLOCK_MAX, (1,))
         block = BLOCK_MIN
         for i in range(BATCH_SIZE):
-            pass
+            #            pass
             #            x[i, 0, block:, :] = torch.randn_like(x[i, 0, block[i]:, :]) * 1e-3
             #            x[i, 0, :, block:] = torch.randn_like(x[i, 0, :, block[i]:]) * 1e-3
-#            x[i, 0, block:, :] = 0
-#            x[i, 0, :, block:] = 0
-#            x[i, 1, block:, :] = 0
-#            x[i, 1, :, block:] = 0
+            x[i, 0, block:, :] = 0
+            x[i, 0, :, block:] = 0
+            x[i, 1, block:, :] = 0
+            x[i, 1, :, block:] = 0
 
         x = self.conv_in(x)
         x = F.relu(x)
