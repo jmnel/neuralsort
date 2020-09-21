@@ -10,10 +10,15 @@ class SeBlock2d(nn.Module):
     def __init__(self, channels, ratio=2):
         super().__init__()
 
-        self.conv = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
+        self.conv = nn.Conv2d(in_channels=channels,
+                              channels,
+                              kernel_size=3,
+                              padding=1)
 
-        self.gate_1 = nn.Linear(in_features=channels, out_features=channels // ratio)
-        self.gate_2 = nn.Linear(in_features=channels // ratio, out_features=channels)
+        self.gate_1 = nn.Linear(in_features=channels,
+                                out_features=channels // ratio)
+        self.gate_2 = nn.Linear(in_features=channels // ratio,
+                                out_features=channels)
 
     def forward(self, x):
 

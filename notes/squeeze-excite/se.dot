@@ -1,0 +1,30 @@
+digraph G {
+
+    overlap=prism
+//    overlap_scaling=0.2
+    ratio=1.2
+    nodesep=0.2
+    ranksep=0.3
+    splines=ortho
+    rankdir=TB
+
+    x [label="X",shape=none]
+    x_ [label="",shape=point]
+    sigmoid [label="σ", shape=box]
+    p [label="Global pooling",shape=box]
+    conv [label="Convolution",shape=box]
+    scale [label="Scale\n⊙", shape=box]
+    fc1 [label="FC 1",shape=box]
+    fc2 [label="FC 2",shape=box]
+    relu [label="ReLu",shape=box]
+    add [label="+", shape=circle,margin=0.01,width=0.01,height=0.01]
+    y [label="X̃",shape=none]
+    x -> x_ [arrowhead=none]
+    x_ -> scale [xlabel="residual  ", weight=0.9]
+    x_ -> conv -> p -> fc1 -> relu -> fc2 -> sigmoid -> scale
+    x_ -> add [xlabel="skip", weight=0.9, xlp="2,0"]
+    scale -> add
+    add -> y
+
+
+}
